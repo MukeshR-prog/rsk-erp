@@ -16,19 +16,29 @@ import {
   LogOut,
   X,
   UserCheck,
+  FolderOpen,
+  Ruler,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@heroui/react";
 import toast from "react-hot-toast";
 
-export const NAV_ITEMS = [
+export const CORE_NAV_ITEMS = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Sales (Billing)", href: "/sales", icon: TrendingUp },
   { label: "Purchases", href: "/purchases", icon: ShoppingCart },
   { label: "Manufacturing", href: "/manufacturing", icon: Factory },
   { label: "Inventory", href: "/inventory", icon: Package },
-  { label: "Contacts (Ledger)", href: "/contacts", icon: Users },
   { label: "Cash & Bank Logs", href: "/ledgers", icon: BookOpen },
   { label: "Reports", href: "/reports", icon: BarChart3 },
+];
+
+export const MASTER_DATA_ITEMS = [
+  { label: "Contacts Catalog", href: "/master-data/contacts", icon: Users },
+  { label: "Products Catalog", href: "/master-data/products", icon: Package },
+  { label: "Product Categories", href: "/master-data/product-categories", icon: FolderOpen },
+  { label: "Units of Measure", href: "/master-data/units", icon: Ruler },
+  { label: "Expense Categories", href: "/master-data/expense-categories", icon: Receipt },
 ];
 
 export default function Sidebar() {
@@ -43,30 +53,63 @@ export default function Sidebar() {
   };
 
   const navLinks = (
-    <nav className="flex flex-col gap-1.5 px-3 py-4 flex-1">
-      {NAV_ITEMS.map((item) => {
-        const Icon = item.icon;
-        const isActive =
-          item.href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(item.href);
+    <nav className="flex flex-col gap-6 px-3 py-4 flex-1 overflow-y-auto">
+      {/* Operations Group */}
+      <div className="flex flex-col gap-1">
+        <p className="px-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">
+          Operations
+        </p>
+        {CORE_NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive =
+            item.href === "/"
+              ? pathname === "/"
+              : pathname.startsWith(item.href) && !pathname.startsWith("/master-data");
 
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={closeSidebar}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-              isActive
-                ? "bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900 shadow-md font-semibold"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-50"
-            }`}
-          >
-            <Icon className="w-5 h-5 flex-shrink-0" />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={closeSidebar}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-205 ${
+                isActive
+                  ? "bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-50"
+              }`}
+            >
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Master Data Group */}
+      <div className="flex flex-col gap-1">
+        <p className="px-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">
+          Master Data
+        </p>
+        {MASTER_DATA_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname.startsWith(item.href);
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={closeSidebar}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-205 ${
+                isActive
+                  ? "bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-50"
+              }`}
+            >
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 
