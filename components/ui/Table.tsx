@@ -78,9 +78,10 @@ export default function Table<T>({
           <HeroUITable.ScrollContainer>
             <HeroUITable.Content aria-label="Responsive data grid">
               <HeroUITable.Header>
-                {headers.map((header) => (
+                {headers.map((header, idx) => (
                   <HeroUITable.Column
                     key={header.key}
+                    isRowHeader={idx === 0}
                     className={`bg-slate-50/60 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-bold uppercase text-xs py-3.5 ${
                       header.className || ""
                     }`}
