@@ -37,13 +37,9 @@ export default function Sidebar() {
   const { sidebarOpen, closeSidebar } = useUIStore();
 
   const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Successfully signed out");
-      closeSidebar();
-    }
+    await signOut();
+    toast.success("Successfully signed out");
+    closeSidebar();
   };
 
   const navLinks = (

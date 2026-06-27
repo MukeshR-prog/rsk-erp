@@ -3,22 +3,17 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent, TextField, Label, Input, FieldError, Button } from "@heroui/react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
+import { loginSchema, LoginFormValues } from "@/features/auth/validations";
 import toast from "react-hot-toast";
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const toggleVisibility = () => setIsVisible(!isVisible);
 
@@ -29,56 +24,25 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "mukeshr1855@gmail.com",
-      password: "1234567890",
+      email: "",
+      password: "",
     },
   });
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setLoading(true);
-      const { data: authData, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
       if (error) {
-        if (error.message === "Invalid login credentials") {
-          toast.loading("Setting up account for the first time...", { id: "auth" });
-          
-          // Auto sign up in case user is signing in for the first time
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: data.email,
-            password: data.password,
-          });
-
-          if (signUpError) {
-            toast.error(signUpError.message, { id: "auth" });
-            return;
-          }
-
-          if (signUpData.user) {
-            // Attempt to login again
-            const { error: retryError } = await supabase.auth.signInWithPassword({
-              email: data.email,
-              password: data.password,
-            });
-
-            if (retryError) {
-              if (signUpData.session === null) {
-                toast.success("Account registered! Check email if verification is required.", { id: "auth" });
-              } else {
-                toast.error(retryError.message, { id: "auth" });
-              }
-            } else {
-              toast.success("Owner account registered and logged in!", { id: "auth" });
-            }
-          }
-        } else {
-          toast.error(error.message);
-        }
+        toast.error("Invalid email or password");
       } else {
         toast.success("Welcome back! Redirecting...");
+        router.push("/");
+        router.refresh();
       }
     } catch (err) {
       console.error(err);

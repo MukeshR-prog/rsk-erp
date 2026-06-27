@@ -131,7 +131,7 @@ export default function DashboardPage() {
             className="w-full sm:w-auto font-bold rounded-xl"
             size="md"
           >
-            <Plus className="w-4 h-4 mr-1.5" />
+            <Plus className="w-4.5 h-4.5 mr-1.5" />
             <span>New Sales Invoice</span>
           </Button>
         }

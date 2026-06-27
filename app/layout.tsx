@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
-import AuthInitializer from "@/components/auth/AuthInitializer";
+import AuthProvider from "@/features/auth/AuthProvider";
 import AppShell from "@/components/layout/AppShell";
 
 const geistSans = Geist({
@@ -48,9 +48,9 @@ export default function RootLayout({
     >
       <body className="h-full bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 selection:bg-slate-900 selection:text-white dark:selection:bg-white dark:selection:text-slate-900">
         <Providers>
-          <AuthInitializer>
+          <AuthProvider>
             <AppShell>{children}</AppShell>
-          </AuthInitializer>
+          </AuthProvider>
         </Providers>
       </body>
     </html>
