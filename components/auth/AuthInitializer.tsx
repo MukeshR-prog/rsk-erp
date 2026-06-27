@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { syncProfile } from "@/features/auth/actions";
 
 const PUBLIC_ROUTES = ["/login", "/auth/callback"];
 
@@ -25,6 +26,11 @@ export default function AuthInitializer({ children }: { children: React.ReactNod
         if (mounted) {
           setUser(session?.user ?? null);
           setInitialized(true);
+          
+          if (session?.user) {
+            // Asynchronously sync profile to postgres database
+            syncProfile(session.user.id, session.user.email ?? "");
+          }
         }
       } catch (error) {
         console.error("Auth initialization failed:", error);
@@ -44,6 +50,11 @@ export default function AuthInitializer({ children }: { children: React.ReactNod
       if (mounted) {
         setUser(session?.user ?? null);
         setInitialized(true);
+
+        if (session?.user) {
+          // Asynchronously sync profile to postgres database
+          syncProfile(session.user.id, session.user.email ?? "");
+        }
       }
     });
 

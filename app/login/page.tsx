@@ -37,13 +37,46 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
       if (error) {
-        toast.error(error.message);
+        if (error.message === "Invalid login credentials") {
+          toast.loading("Setting up account for the first time...", { id: "auth" });
+          
+          // Auto sign up in case user is signing in for the first time
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: data.email,
+            password: data.password,
+          });
+
+          if (signUpError) {
+            toast.error(signUpError.message, { id: "auth" });
+            return;
+          }
+
+          if (signUpData.user) {
+            // Attempt to login again
+            const { error: retryError } = await supabase.auth.signInWithPassword({
+              email: data.email,
+              password: data.password,
+            });
+
+            if (retryError) {
+              if (signUpData.session === null) {
+                toast.success("Account registered! Check email if verification is required.", { id: "auth" });
+              } else {
+                toast.error(retryError.message, { id: "auth" });
+              }
+            } else {
+              toast.success("Owner account registered and logged in!", { id: "auth" });
+            }
+          }
+        } else {
+          toast.error(error.message);
+        }
       } else {
         toast.success("Welcome back! Redirecting...");
       }
