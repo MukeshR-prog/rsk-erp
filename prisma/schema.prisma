@@ -1,10 +1,284 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
 datasource db {
   provider = "postgresql"
 }
 
-generator client {
-  provider   = "prisma-client-js"
-  engineType = "library"
+model Profile {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  fullName  String?
+  role      String   @default("OWNER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Contact {
+  id                 String      @id @default(uuid())
+  name               String
+  type               ContactType
+  contactPerson      String?
+  phone              String?     @unique
+  altPhone           String?
+  email              String?     @unique
+  gstNumber          String?
+  address            String?
+  city               String?
+  state              String?
+  pincode            String?
+  openingBalance     Decimal     @default(0.0) @db.Decimal(12, 2)
+  outstandingBalance Decimal     @default(0.0) @db.Decimal(12, 2)
+  notes              String?
+  isActive           Boolean     @default(true)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  invoices           Invoice[]
+  payments           Payment[]
+  purchases          Purchase[]
+
+  @@index([type])
+}
+
+model Product {
+  id                String               @id @default(uuid())
+  code              String               @unique
+  name              String               @unique
+  type              ProductType
+  description       String?
+  imageUrl          String?
+  volumeMl          String?
+  color             String?
+  currentStock      Decimal              @default(0.0) @db.Decimal(12, 2)
+  averageCost       Decimal              @default(0.0) @db.Decimal(12, 2)
+  purchasePrice     Decimal?             @db.Decimal(12, 2)
+  sellingPrice      Decimal?             @db.Decimal(12, 2)
+  minStockAlert     Decimal?             @db.Decimal(12, 2)
+  isActive          Boolean              @default(true)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  categoryId        String?
+  unitId            String?
+  bomItems          BOMItem[]
+  bomRecipes        BOMRecipe[]
+  invoiceItems      InvoiceItem[]
+  category          ProductCategory?     @relation(fields: [categoryId], references: [id])
+  unit              Unit?                @relation(fields: [unitId], references: [id])
+  productionBatches ProductionBatch[]
+  consumedInBatches ProductionMaterial[]
+  purchaseItems     PurchaseItem[]
+  stockMovements    StockMovement[]
+
+  @@index([type])
+  @@index([categoryId])
+  @@index([unitId])
+}
+
+model ProductCategory {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Unit {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  products      Product[]
+  purchaseItems PurchaseItem[]
+}
+
+model ExpenseCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BOMRecipe {
+  id                 String            @id @default(uuid())
+  name               String            @unique
+  finishedProductId  String
+  wasteFactorPercent Decimal           @default(0.0) @db.Decimal(5, 2)
+  isActive           Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  items              BOMItem[]
+  finishedProduct    Product           @relation(fields: [finishedProductId], references: [id])
+  productionBatches  ProductionBatch[]
+
+  @@index([finishedProductId])
+}
+
+model BOMItem {
+  id         String    @id @default(uuid())
+  recipeId   String
+  materialId String
+  quantity   Decimal   @db.Decimal(12, 4)
+  material   Product   @relation(fields: [materialId], references: [id])
+  recipe     BOMRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, materialId])
+  @@index([materialId])
+}
+
+model StockMovement {
+  id          String       @id @default(uuid())
+  productId   String
+  quantity    Decimal      @db.Decimal(12, 2)
+  type        MovementType
+  referenceId String?
+  notes       String?
+  createdAt   DateTime     @default(now())
+  product     Product      @relation(fields: [productId], references: [id])
+
+  @@index([productId, createdAt])
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique
+  type          InvoiceType
+  contactId     String
+  invoiceDate   DateTime      @default(now())
+  dueDate       DateTime?
+  totalAmount   Decimal       @db.Decimal(12, 2)
+  paidAmount    Decimal       @default(0.0) @db.Decimal(12, 2)
+  paymentStatus PaymentStatus @default(UNPAID)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  contact       Contact       @relation(fields: [contactId], references: [id])
+  items         InvoiceItem[]
+  payments      Payment[]
+
+  @@index([contactId])
+  @@index([invoiceNumber])
+  @@index([type])
+}
+
+model InvoiceItem {
+  id         String   @id @default(uuid())
+  invoiceId  String
+  productId  String
+  quantity   Decimal  @db.Decimal(12, 2)
+  unitPrice  Decimal  @db.Decimal(12, 2)
+  totalPrice Decimal  @db.Decimal(12, 2)
+  costPrice  Decimal? @db.Decimal(12, 2)
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id])
+
+  @@index([invoiceId])
+  @@index([productId])
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  contactId       String
+  invoiceId       String?
+  amount          Decimal       @db.Decimal(12, 2)
+  paymentDate     DateTime      @default(now())
+  paymentMethod   PaymentMethod
+  referenceNumber String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  contact         Contact       @relation(fields: [contactId], references: [id])
+  invoice         Invoice?      @relation(fields: [invoiceId], references: [id])
+
+  @@index([contactId])
+  @@index([invoiceId])
+}
+
+model ProductionBatch {
+  id                String               @id @default(uuid())
+  batchNumber       String               @unique
+  recipeId          String
+  productId         String
+  quantityProduced  Decimal              @db.Decimal(12, 2)
+  batchDate         DateTime             @default(now())
+  fuelCost          Decimal              @default(0.0) @db.Decimal(12, 2)
+  labourCost        Decimal              @default(0.0) @db.Decimal(12, 2)
+  packingCost       Decimal              @default(0.0) @db.Decimal(12, 2)
+  transportCost     Decimal              @default(0.0) @db.Decimal(12, 2)
+  electricityCost   Decimal              @default(0.0) @db.Decimal(12, 2)
+  maintenanceCost   Decimal              @default(0.0) @db.Decimal(12, 2)
+  miscCost          Decimal              @default(0.0) @db.Decimal(12, 2)
+  totalMaterialCost Decimal              @default(0.0) @db.Decimal(12, 2)
+  totalBatchCost    Decimal              @default(0.0) @db.Decimal(12, 2)
+  unitCost          Decimal              @default(0.0) @db.Decimal(12, 2)
+  status            BatchStatus          @default(DRAFT)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  product           Product              @relation(fields: [productId], references: [id])
+  recipe            BOMRecipe            @relation(fields: [recipeId], references: [id])
+  materialsConsumed ProductionMaterial[]
+
+  @@index([productId])
+  @@index([recipeId])
+  @@index([batchNumber])
+}
+
+model ProductionMaterial {
+  id               String          @id @default(uuid())
+  batchId          String
+  materialId       String
+  quantityConsumed Decimal         @db.Decimal(12, 4)
+  unitCost         Decimal         @db.Decimal(12, 2)
+  batch            ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  material         Product         @relation(fields: [materialId], references: [id])
+
+  @@index([batchId])
+  @@index([materialId])
+}
+
+model Purchase {
+  id                    String                @id @default(uuid())
+  purchaseNumber        String                @unique
+  supplierId            String
+  purchaseDate          DateTime              @default(now())
+  supplierInvoiceNumber String?
+  reference             String?
+  notes                 String?
+  discount              Decimal               @default(0.0) @db.Decimal(12, 2)
+  transportCharges      Decimal               @default(0.0) @db.Decimal(12, 2)
+  subtotal              Decimal               @db.Decimal(12, 2)
+  grandTotal            Decimal               @db.Decimal(12, 2)
+  status                PurchaseStatus        @default(COMPLETED)
+  paymentStatus         PurchasePaymentStatus @default(UNPAID)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  supplier              Contact               @relation(fields: [supplierId], references: [id])
+  items                 PurchaseItem[]
+
+  @@index([supplierId])
+  @@index([purchaseNumber])
+}
+
+model PurchaseItem {
+  id           String   @id @default(uuid())
+  purchaseId   String
+  productId    String
+  quantity     Decimal  @db.Decimal(12, 2)
+  unitId       String
+  purchaseRate Decimal  @db.Decimal(12, 2)
+  discount     Decimal  @default(0.0) @db.Decimal(12, 2)
+  lineTotal    Decimal  @db.Decimal(12, 2)
+  remarks      String?
+  product      Product  @relation(fields: [productId], references: [id])
+  purchase     Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  unit         Unit     @relation(fields: [unitId], references: [id])
+
+  @@index([purchaseId])
+  @@index([productId])
+  @@index([unitId])
 }
 
 enum ContactType {
@@ -49,233 +323,14 @@ enum BatchStatus {
   CANCELLED
 }
 
-model Profile {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  fullName  String?
-  role      String   @default("OWNER")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum PurchaseStatus {
+  DRAFT
+  COMPLETED
+  CANCELLED
 }
 
-model Contact {
-  id                 String      @id @default(uuid())
-  name               String
-  type               ContactType
-  contactPerson      String?
-  phone              String?     @unique
-  altPhone           String?
-  email              String?     @unique
-  gstNumber          String?
-  address            String?
-  city               String?
-  state              String?
-  pincode            String?
-  openingBalance     Decimal     @default(0.0) @db.Decimal(12, 2)
-  outstandingBalance Decimal     @default(0.0) @db.Decimal(12, 2)
-  notes              String?
-  isActive           Boolean     @default(true)
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  invoices           Invoice[]
-  payments           Payment[]
-
-  @@index([type])
-}
-
-model Product {
-  id                String               @id @default(uuid())
-  code              String               @unique
-  name              String               @unique
-  type              ProductType
-  description       String?
-  imageUrl          String?
-  volumeMl          String?              // e.g., "150ml", "250ml"
-  color             String?              // e.g., "Red", "Blue"
-  currentStock      Decimal              @default(0.0) @db.Decimal(12, 2)
-  averageCost       Decimal              @default(0.0) @db.Decimal(12, 2)
-  purchasePrice     Decimal?             @db.Decimal(12, 2) // Default Purchase Price
-  sellingPrice      Decimal?             @db.Decimal(12, 2) // Default Selling Price
-  minStockAlert     Decimal?             @db.Decimal(12, 2)
-  isActive          Boolean              @default(true)
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  
-  categoryId        String?
-  category          ProductCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  unitId            String?
-  unit              Unit?                @relation(fields: [unitId], references: [id], onDelete: SetNull)
-
-  stockMovements    StockMovement[]
-  invoiceItems      InvoiceItem[]
-  bomRecipes        BOMRecipe[]
-  bomItems          BOMItem[]
-  productionBatches ProductionBatch[]
-  consumedInBatches ProductionMaterial[]
-
-  @@index([type])
-  @@index([categoryId])
-  @@index([unitId])
-}
-
-model ProductCategory {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  products  Product[]
-}
-
-model Unit {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  products  Product[]
-}
-
-model ExpenseCategory {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model BOMRecipe {
-  id                 String            @id @default(uuid())
-  name               String            @unique
-  finishedProductId  String
-  finishedProduct    Product           @relation(fields: [finishedProductId], references: [id], onDelete: Restrict)
-  wasteFactorPercent Decimal           @default(0.0) @db.Decimal(5, 2)
-  isActive           Boolean           @default(true)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  items              BOMItem[]
-  productionBatches  ProductionBatch[]
-
-  @@index([finishedProductId])
-}
-
-model BOMItem {
-  id         String    @id @default(uuid())
-  recipeId   String
-  recipe     BOMRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  materialId String
-  material   Product   @relation(fields: [materialId], references: [id], onDelete: Restrict)
-  quantity   Decimal   @db.Decimal(12, 4)
-
-  @@unique([recipeId, materialId])
-  @@index([materialId])
-}
-
-model StockMovement {
-  id          String       @id @default(uuid())
-  productId   String
-  product     Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantity    Decimal      @db.Decimal(12, 2)
-  type        MovementType
-  referenceId String?      // links to invoice or batch ID
-  notes       String?
-  createdAt   DateTime     @default(now())
-
-  @@index([productId, createdAt])
-}
-
-model Invoice {
-  id            String        @id @default(uuid())
-  invoiceNumber String        @unique
-  type          InvoiceType
-  contactId     String
-  contact       Contact       @relation(fields: [contactId], references: [id], onDelete: Restrict)
-  invoiceDate   DateTime      @default(now())
-  dueDate       DateTime?
-  totalAmount   Decimal       @db.Decimal(12, 2)
-  paidAmount    Decimal       @default(0.0) @db.Decimal(12, 2)
-  paymentStatus PaymentStatus @default(UNPAID)
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  items         InvoiceItem[]
-  payments      Payment[]
-
-  @@index([contactId])
-  @@index([invoiceNumber])
-  @@index([type])
-}
-
-model InvoiceItem {
-  id         String   @id @default(uuid())
-  invoiceId  String
-  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantity   Decimal  @db.Decimal(12, 2)
-  unitPrice  Decimal  @db.Decimal(12, 2)
-  totalPrice Decimal  @db.Decimal(12, 2)
-  costPrice  Decimal? @db.Decimal(12, 2) // WAC at time of transaction
-
-  @@index([invoiceId])
-  @@index([productId])
-}
-
-model Payment {
-  id              String        @id @default(uuid())
-  contactId       String
-  contact         Contact       @relation(fields: [contactId], references: [id], onDelete: Restrict)
-  invoiceId       String?
-  invoice         Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  amount          Decimal       @db.Decimal(12, 2)
-  paymentDate     DateTime      @default(now())
-  paymentMethod   PaymentMethod
-  referenceNumber String?
-  notes           String?
-  createdAt       DateTime      @default(now())
-
-  @@index([contactId])
-  @@index([invoiceId])
-}
-
-model ProductionBatch {
-  id                String               @id @default(uuid())
-  batchNumber       String               @unique
-  recipeId          String
-  recipe            BOMRecipe            @relation(fields: [recipeId], references: [id], onDelete: Restrict)
-  productId         String
-  product           Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantityProduced  Decimal              @db.Decimal(12, 2)
-  batchDate         DateTime             @default(now())
-  fuelCost          Decimal              @default(0.0) @db.Decimal(12, 2)
-  labourCost        Decimal              @default(0.0) @db.Decimal(12, 2)
-  packingCost       Decimal              @default(0.0) @db.Decimal(12, 2)
-  transportCost     Decimal              @default(0.0) @db.Decimal(12, 2)
-  electricityCost   Decimal              @default(0.0) @db.Decimal(12, 2)
-  maintenanceCost   Decimal              @default(0.0) @db.Decimal(12, 2)
-  miscCost          Decimal              @default(0.0) @db.Decimal(12, 2)
-  totalMaterialCost Decimal              @default(0.0) @db.Decimal(12, 2)
-  totalBatchCost    Decimal              @default(0.0) @db.Decimal(12, 2)
-  unitCost          Decimal              @default(0.0) @db.Decimal(12, 2)
-  status            BatchStatus          @default(DRAFT)
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  materialsConsumed ProductionMaterial[]
-
-  @@index([productId])
-  @@index([recipeId])
-  @@index([batchNumber])
-}
-
-model ProductionMaterial {
-  id               String          @id @default(uuid())
-  batchId          String
-  batch            ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  materialId       String
-  material         Product         @relation(fields: [materialId], references: [id], onDelete: Restrict)
-  quantityConsumed Decimal         @db.Decimal(12, 4)
-  unitCost         Decimal         @db.Decimal(12, 2)
-
-  @@index([batchId])
-  @@index([materialId])
+enum PurchasePaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
 }

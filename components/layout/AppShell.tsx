@@ -10,8 +10,9 @@ import GlobalLoading from "@/components/ui/GlobalLoading";
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = pathname === "/login" || pathname?.startsWith("/auth/");
+  const isWorkspaceSelectPage = pathname === "/workspace";
 
-  if (isAuthPage) {
+  if (isAuthPage || isWorkspaceSelectPage) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
         {children}
