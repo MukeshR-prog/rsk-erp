@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { LedgerService } from "@/features/trading/payments/ledger.service";
 
 function handlePrismaError(error: any, defaultMsg: string): string {
   if (error && error.code === "P2002") {
@@ -63,15 +64,23 @@ export async function getContacts(params: {
       prisma.contact.count({ where }),
     ]);
 
-    return {
-      success: true,
-      data: items.map((item) => ({
+    const formatted = [];
+    for (const item of items) {
+      const outstandingBalance = item.type === "SUPPLIER"
+        ? await LedgerService.getSupplierOutstanding(item.id, prisma)
+        : await LedgerService.getCustomerOutstanding(item.id, prisma);
+      formatted.push({
         ...item,
         openingBalance: Number(item.openingBalance),
-        outstandingBalance: Number(item.outstandingBalance),
+        outstandingBalance,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
-      })),
+      });
+    }
+
+    return {
+      success: true,
+      data: formatted,
       meta: {
         total,
         page,
@@ -100,12 +109,16 @@ export async function getContactDetails(id: string) {
       return { success: false, error: "Contact not found." };
     }
 
+    const outstandingBalance = item.type === "SUPPLIER"
+      ? await LedgerService.getSupplierOutstanding(item.id, prisma)
+      : await LedgerService.getCustomerOutstanding(item.id, prisma);
+
     return {
       success: true,
       data: {
         ...item,
         openingBalance: Number(item.openingBalance),
-        outstandingBalance: Number(item.outstandingBalance),
+        outstandingBalance,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
       },
@@ -155,12 +168,16 @@ export async function createContact(data: {
     });
 
     revalidatePath("/master-data/contacts");
+    const outstandingBalance = item.type === "SUPPLIER"
+      ? await LedgerService.getSupplierOutstanding(item.id, prisma)
+      : await LedgerService.getCustomerOutstanding(item.id, prisma);
+
     return {
       success: true,
       data: {
         ...item,
         openingBalance: Number(item.openingBalance),
-        outstandingBalance: Number(item.outstandingBalance),
+        outstandingBalance,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
       },
@@ -213,12 +230,16 @@ export async function updateContact(id: string, data: {
     revalidatePath("/master-data/contacts");
     revalidatePath(`/master-data/contacts/${id}`);
     
+    const outstandingBalance = item.type === "SUPPLIER"
+      ? await LedgerService.getSupplierOutstanding(item.id, prisma)
+      : await LedgerService.getCustomerOutstanding(item.id, prisma);
+
     return {
       success: true,
       data: {
         ...item,
         openingBalance: Number(item.openingBalance),
-        outstandingBalance: Number(item.outstandingBalance),
+        outstandingBalance,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
       },
@@ -264,12 +285,16 @@ export async function toggleContactStatus(id: string, isActive: boolean) {
     revalidatePath("/master-data/contacts");
     revalidatePath(`/master-data/contacts/${id}`);
     
+    const outstandingBalance = item.type === "SUPPLIER"
+      ? await LedgerService.getSupplierOutstanding(item.id, prisma)
+      : await LedgerService.getCustomerOutstanding(item.id, prisma);
+
     return {
       success: true,
       data: {
         ...item,
         openingBalance: Number(item.openingBalance),
-        outstandingBalance: Number(item.outstandingBalance),
+        outstandingBalance,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
       },

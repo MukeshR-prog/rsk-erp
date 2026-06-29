@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import { Button } from "@heroui/react";
@@ -15,48 +15,71 @@ import {
   BarChart3,
   ArrowRight,
   TrendingDown,
-  Info
+  Info,
+  Calendar,
+  DollarSign
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import Link from "next/link";
+import { getTradingDashboardData } from "@/features/trading/payments/actions";
+import dayjs from "dayjs";
 
 export default function TradingDashboardPage() {
   const { setWorkspace } = useWorkspaceStore();
+
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
 
   // Ensure workspace store matches routing context
   useEffect(() => {
     setWorkspace("trading");
   }, [setWorkspace]);
 
-  const handleShortcutClick = (actionName: string) => {
-    toast.success(`${actionName} module will be connected in the next phase (Trading & Invoices)!`);
+  const loadDashboardData = async () => {
+    setLoading(true);
+    try {
+      const res = await getTradingDashboardData();
+      if (res.success && res.data) {
+        setData(res.data);
+      } else {
+        toast.error(res.error || "Failed to load dashboard data.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error loading dashboard data.");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const handleShortcutClick = (actionName: string) => {
+    toast.success(`${actionName} module will be connected in the next phase!`);
+  };
+
+  if (loading || !data) {
+    return (
+      <div className="flex h-[400px] items-center justify-center text-slate-500 font-medium">
+        Loading Trading Dashboard...
+      </div>
+    );
+  }
+
+  const { metrics, recentPurchases, recentPayments } = data;
+
   const kpis = [
-    { title: "Today's Purchases", value: "₹0.00" },
-    { title: "Today's Sales", value: "₹0.00" },
-    { title: "Today's Collections", value: "₹0.00" },
-    { title: "Today's Payments", value: "₹0.00" },
-    { title: "Customer Outstanding", value: "₹0.00" },
-    { title: "Supplier Outstanding", value: "₹0.00" },
-    { title: "Current Stock Value", value: "₹0.00" },
-    { title: "Low Stock Items", value: "0 Items" },
-  ];
-
-  const quickActions = [
-    { label: "New Purchase", icon: ShoppingBag, color: "bg-slate-900 dark:bg-slate-50", click: () => handleShortcutClick("New Purchase") },
-    { label: "New Sale", icon: TrendingUp, color: "bg-slate-900 dark:bg-slate-50", click: () => handleShortcutClick("New Sale") },
-    { label: "Receive Payment", icon: CreditCard, color: "bg-slate-900 dark:bg-slate-50", click: () => handleShortcutClick("Receive Payment") },
-    { label: "Supplier Payment", icon: TrendingDown, color: "bg-slate-900 dark:bg-slate-50", click: () => handleShortcutClick("Supplier Payment") },
-  ];
-
-  const navigationShortcuts = [
-    { label: "Customers", href: "/master-data/contacts", desc: "Manage trading customer contact records", icon: Users },
-    { label: "Suppliers", href: "/master-data/contacts", desc: "Manage raw material & goods vendors", icon: Users },
-    { label: "Inventory", href: "/trading/inventory", desc: "Check trading goods inventory", icon: Package, click: () => handleShortcutClick("Inventory Ledger") },
-    { label: "Cash Book", href: "/trading/cashbook", desc: "Daily collection & cash registers", icon: BookOpen, click: () => handleShortcutClick("Cash Book") },
-    { label: "Reports", href: "/trading/reports", desc: "Trading sales & purchases charts", icon: BarChart3, click: () => handleShortcutClick("Trading Reports") },
+    { title: "Today's Purchases", value: `₹${metrics.todayPurchases.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Logged bills today" },
+    { title: "Today's Payments", value: `₹${metrics.todayPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Cleared vendor payments today" },
+    { title: "Supplier Outstanding", value: `₹${metrics.supplierOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Total unpaid supplier bills" },
+    { title: "Current Stock Value", value: `₹${metrics.currentStockValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Weighted stock valuation" },
+    { title: "Today's Sales", value: "₹0.00", subtitle: "Coming soon in Sales phase", isComingSoon: true },
+    { title: "Today's Collections", value: "₹0.00", subtitle: "Coming soon in Sales phase", isComingSoon: true },
+    { title: "Customer Outstanding", value: "₹0.00", subtitle: "Coming soon in Sales phase", isComingSoon: true },
+    { title: "Low Stock Items", value: `${metrics.lowStockCount} Items`, subtitle: "Current inventory warnings" },
   ];
 
   return (
@@ -65,15 +88,16 @@ export default function TradingDashboardPage() {
         title="Trading Dashboard"
         subtitle="Distribution, purchases, and sales operations"
         action={
-          <Button
-            variant="primary"
-            onPress={() => handleShortcutClick("New Sale")}
-            className="w-full sm:w-auto font-bold rounded-xl"
-            size="md"
-          >
-            <Plus className="w-4.5 h-4.5 mr-1.5" />
-            <span>New Sale</span>
-          </Button>
+          <Link href="/trading/purchases?new=true">
+            <Button
+              variant="primary"
+              className="w-full sm:w-auto font-bold rounded-xl"
+              size="md"
+            >
+              <Plus className="w-4.5 h-4.5 mr-1.5" />
+              <span>New Purchase Invoice</span>
+            </Button>
+          </Link>
         }
       />
 
@@ -82,11 +106,15 @@ export default function TradingDashboardPage() {
         {kpis.map((kpi) => (
           <Card
             key={kpi.title}
-            className="border-l-4 border-l-slate-200 dark:border-l-slate-800"
+            className={`border-l-4 ${
+              kpi.isComingSoon
+                ? "border-l-slate-200 dark:border-l-slate-800 opacity-60"
+                : "border-l-slate-900 dark:border-l-slate-100"
+            }`}
             title={kpi.title}
-            subtitle="No data available yet"
+            subtitle={kpi.subtitle}
           >
-            <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-400 dark:text-slate-600 block mt-1">
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100 block mt-1">
               {kpi.value}
             </span>
           </Card>
@@ -97,84 +125,171 @@ export default function TradingDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card title="Quick Tasks" className="md:col-span-2" subtitle="One-tap actions for common trading transactions">
           <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <Button
-                  key={action.label}
-                  variant="tertiary"
-                  className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-100 dark:border-slate-850"
-                  onPress={action.click}
-                >
-                  <Icon className="w-5 h-5 text-slate-805 dark:text-slate-205" />
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate w-full text-center">
-                    {action.label}
-                  </span>
-                </Button>
-              );
-            })}
+            <Link href="/trading/purchases?new=true" className="w-full">
+              <Button
+                variant="tertiary"
+                className="h-20 w-full flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855"
+              >
+                <ShoppingBag className="w-5 h-5 text-slate-805 dark:text-slate-205" />
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">New Purchase</span>
+              </Button>
+            </Link>
+
+            <Button
+              variant="tertiary"
+              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855 opacity-50"
+              onPress={() => handleShortcutClick("New Sale")}
+            >
+              <TrendingUp className="w-5 h-5 text-slate-805 dark:text-slate-205" />
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">New Sale (Lock)</span>
+            </Button>
+
+            <Button
+              variant="tertiary"
+              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855 opacity-50"
+              onPress={() => handleShortcutClick("Receive Payment")}
+            >
+              <CreditCard className="w-5 h-5 text-slate-805 dark:text-slate-205" />
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Receive Payment</span>
+            </Button>
+
+            <Link href="/trading/payments?new=true" className="w-full">
+              <Button
+                variant="tertiary"
+                className="h-20 w-full flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855"
+              >
+                <TrendingDown className="w-5 h-5 text-slate-805 dark:text-slate-205" />
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 font-semibold">Supplier Payment</span>
+              </Button>
+            </Link>
           </div>
         </Card>
 
         {/* Notice Info Card */}
-        <Card title="Next Phase Preview" subtitle="Development Roadmap Status">
+        <Card title="Workspace Metrics" subtitle="Active registers configuration">
           <div className="flex flex-col gap-3 mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
             <div className="flex gap-2.5 items-start">
               <Info className="w-5.5 h-5.5 text-slate-900 dark:text-slate-50 flex-shrink-0" />
               <span>
-                These analytics will auto-populate as soon as the **Trading Invoice** and **Collections** ledger modules are implemented.
+                These analytics are linked directly to your Supabase PostgreSQL registers. Double entries calculate outstandings on runtime.
               </span>
             </div>
-            <div className="mt-1 flex flex-col gap-1.5">
-              <span className="font-bold text-slate-900 dark:text-slate-50">Included Modules:</span>
-              <span className="pl-3.5">• Cash & Bank Logbook</span>
-              <span className="pl-3.5">• Customer Ledger Sheets</span>
-              <span className="pl-3.5">• Vendor Bills Outstanding</span>
-            </div>
           </div>
+        </Card>
+      </div>
+
+      {/* Recent Purchases & Payments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Purchases */}
+        <Card title="Recent Purchase Invoices" subtitle="Latest logged vendor invoices">
+          {recentPurchases.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400">No purchase records registered yet.</div>
+          ) : (
+            <div className="flex flex-col gap-3.5">
+              {recentPurchases.map((p: any) => {
+                let badgeClass = "";
+                if (p.paymentStatus === "PAID") badgeClass = "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400";
+                else if (p.paymentStatus === "PARTIALLY_PAID") badgeClass = "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400";
+                else badgeClass = "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400";
+
+                return (
+                  <div key={p.id} className="flex justify-between items-center p-3 rounded-xl border border-slate-100 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                    <div className="flex flex-col gap-1 text-left">
+                      <Link href={`/trading/purchases/${p.id}`} className="font-mono font-bold text-sm text-slate-900 dark:text-white hover:underline">
+                        {p.number}
+                      </Link>
+                      <span className="text-xs text-slate-450 dark:text-slate-500">{p.supplierName} • {dayjs(p.date).format("DD MMM YYYY")}</span>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className="text-sm font-extrabold">₹{p.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border border-current ${badgeClass}`}>
+                        {p.paymentStatus}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+
+        {/* Recent Payments */}
+        <Card title="Recent Supplier Payments" subtitle="Latest settlements registered">
+          {recentPayments.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400">No payment receipts registered yet.</div>
+          ) : (
+            <div className="flex flex-col gap-3.5">
+              {recentPayments.map((p: any) => (
+                <div key={p.id} className="flex justify-between items-center p-3 rounded-xl border border-slate-100 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                  <div className="flex flex-col gap-1 text-left">
+                    <Link href={`/trading/payments/${p.id}`} className="font-mono font-bold text-sm text-slate-900 dark:text-white hover:underline">
+                      {p.number}
+                    </Link>
+                    <span className="text-xs text-slate-450 dark:text-slate-500">{p.supplierName} • {dayjs(p.date).format("DD MMM YYYY")}</span>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-sm font-extrabold text-green-600 dark:text-green-400">₹{p.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                    <span className={`text-[10px] font-bold ${p.status === "CANCELLED" ? "text-red-500" : "text-slate-450"}`}>
+                      {p.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
 
       {/* Navigation Shortcuts */}
       <Card title="Navigation Shortcuts" subtitle="Fast links to sub-menus and databases">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {navigationShortcuts.map((shortcut) => {
-            const Icon = shortcut.icon;
-            const content = (
-              <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-slate-300 dark:border-slate-850 dark:hover:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-200 cursor-pointer group">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-slate-50 dark:bg-slate-950 rounded-xl text-slate-700 dark:text-slate-350">
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-slate-900 dark:text-slate-50">
-                      {shortcut.label}
-                    </span>
-                    <span className="text-xs text-slate-450 dark:text-slate-500 mt-0.5">
-                      {shortcut.desc}
-                    </span>
-                  </div>
+          <Link href="/master-data/contacts?type=CUSTOMER">
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-slate-300 dark:border-slate-850 dark:hover:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-200 cursor-pointer group">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-slate-50 dark:bg-slate-950 rounded-xl text-slate-700 dark:text-slate-350">
+                  <Users className="w-5 h-5" />
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-bold text-slate-905 dark:text-slate-50">Customers</span>
+                  <span className="text-xs text-slate-450 dark:text-slate-500 mt-0.5">Manage customer registers</span>
+                </div>
               </div>
-            );
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
 
-            if (shortcut.click) {
-              return (
-                <div key={shortcut.label} onClick={shortcut.click}>
-                  {content}
+          <Link href="/master-data/contacts?type=SUPPLIER">
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-slate-300 dark:border-slate-850 dark:hover:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-200 cursor-pointer group">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-slate-50 dark:bg-slate-950 rounded-xl text-slate-700 dark:text-slate-350">
+                  <Users className="w-5 h-5" />
                 </div>
-              );
-            }
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-bold text-slate-905 dark:text-slate-50">Suppliers</span>
+                  <span className="text-xs text-slate-450 dark:text-slate-500 mt-0.5">Manage vendor registers</span>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
 
-            return (
-              <Link key={shortcut.label} href={shortcut.href}>
-                {content}
-              </Link>
-            );
-          })}
+          <Link href="/trading/payments">
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-slate-300 dark:border-slate-850 dark:hover:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-200 cursor-pointer group">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-slate-50 dark:bg-slate-950 rounded-xl text-slate-700 dark:text-slate-350">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-bold text-slate-905 dark:text-slate-50">Supplier Payments</span>
+                  <span className="text-xs text-slate-450 dark:text-slate-500 mt-0.5">Settle supplier bills</span>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
         </div>
       </Card>
     </div>
   );
 }
+

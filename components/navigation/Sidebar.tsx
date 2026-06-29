@@ -79,6 +79,7 @@ export default function Sidebar() {
     { label: "Customers", href: "/master-data/contacts?type=CUSTOMER", icon: Users },
     { label: "Suppliers", href: "/master-data/contacts?type=SUPPLIER", icon: Users },
     { label: "Purchases", href: "/trading/purchases", icon: ShoppingCart },
+    { label: "Supplier Payments", href: "/trading/payments", icon: TrendingDown },
   ];
 
   const manufacturingItems = [

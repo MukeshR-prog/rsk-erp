@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useTransition, use } from "react";
+import { useEffect, useState, useTransition, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
@@ -47,14 +47,10 @@ interface ContactData {
   isActive: boolean;
 }
 
-interface ContactsPageProps {
-  searchParams: Promise<{ type?: string }>;
-}
-
-export default function ContactsPage({ searchParams }: ContactsPageProps) {
+function ContactsPageContent() {
   const router = useRouter();
-  const resolvedParams = use(searchParams);
-  const typeParam = resolvedParams.type;
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get("type");
 
   const [contacts, setContacts] = useState<ContactData[]>([]);
   const [total, setTotal] = useState(0);
@@ -675,5 +671,13 @@ export default function ContactsPage({ searchParams }: ContactsPageProps) {
         />
       )}
     </div>
+  );
+}
+
+export default function ContactsPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center text-slate-500">Loading contacts registry...</div>}>
+      <ContactsPageContent />
+    </Suspense>
   );
 }
