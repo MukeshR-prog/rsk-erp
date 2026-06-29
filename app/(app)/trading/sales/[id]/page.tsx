@@ -41,12 +41,12 @@ import {
 import { cancelCustomerReceiptAction } from "@/features/trading/payments/actions";
 
 import { SaleItemsTable } from "@/components/erp/sales/SaleItemsTable";
-import { SaleSummaryCard } from "@/components/erp/sales/SaleSummaryCard";
 import { SaleStatusBadge } from "@/components/erp/sales/SaleStatusBadge";
 import { SaleForm } from "@/components/erp/sales/SaleForm";
-import ReceiptForm from "@/components/erp/sales/ReceiptForm";
 
 import PaymentHistoryTable from "@/components/erp/payments/PaymentHistoryTable";
+import PaymentSummaryCard from "@/components/erp/payments/PaymentSummaryCard";
+import PaymentForm from "@/components/erp/payments/PaymentForm";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -380,12 +380,11 @@ export default function SaleDetailsPage({ params }: PageProps) {
 
         {/* Right Column (Totals) */}
         <div className="flex flex-col gap-6">
-          <SaleSummaryCard
-            subtotal={subtotal}
-            discount={discount}
-            transportCharges={transportCharges}
+          <PaymentSummaryCard
             grandTotal={grandTotal}
-            paidAmount={totalPaid}
+            totalPaid={totalPaid}
+            remainingBalance={dueAmount}
+            paymentStatus={sale.paymentStatus}
           />
 
           {sale.status === "CANCELLED" && (
@@ -432,9 +431,11 @@ export default function SaleDetailsPage({ params }: PageProps) {
                 </span>
               </ModalHeader>
               <ModalBody className="pt-4">
-                <ReceiptForm
+                <PaymentForm
+                  mode="CUSTOMER"
                   saleId={sale.id}
                   contactId={sale.customerId}
+                  contacts={customers}
                   prefilledBalance={dueAmount}
                   onSuccess={() => {
                     setIsReceiptModalOpen(false);

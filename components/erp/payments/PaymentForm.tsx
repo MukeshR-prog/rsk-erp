@@ -3,56 +3,68 @@
 import React, { useEffect, useState, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createPaymentSchema, CreatePaymentFormValues } from "@/features/trading/payments/validations";
-import { createSupplierPaymentAction, getPendingSupplierPurchases } from "@/features/trading/payments/actions";
-import { TextField, Label, Input, FieldError, Button } from "@heroui/react";
+import { createPaymentSchema, createReceiptSchema, CreatePaymentFormValues } from "@/features/trading/payments/validations";
+import {
+  createSupplierPaymentAction,
+  createCustomerReceiptAction,
+  getPendingSupplierPurchases,
+  getPendingCustomerSales
+} from "@/features/trading/payments/actions";
+import { TextField, Label, Input, Button } from "@heroui/react";
 import ContactSelector from "@/components/ui/ContactSelector";
 import DropdownSelector, { DropdownOption } from "@/components/ui/DropdownSelector";
 import { CurrencyInput } from "@/components/ui/form/CurrencyInput";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 
-interface SupplierOption {
+interface ContactOption {
   id: string;
   name: string;
   type: string;
   phone?: string | null;
 }
 
-interface PendingPurchase {
+interface PendingInvoice {
   id: string;
-  purchaseNumber: string;
-  purchaseDate: Date | string;
+  purchaseNumber?: string;
+  saleNumber?: string;
+  purchaseDate?: Date | string;
+  saleDate?: Date | string;
   grandTotal: number;
   remainingBalance: number;
 }
 
 interface PaymentFormProps {
-  suppliers?: SupplierOption[];
+  contacts?: ContactOption[];
   purchaseId?: string; // Preselected purchase
-  contactId?: string; // Preselected supplier
+  saleId?: string; // Preselected sale
+  contactId?: string; // Preselected contact
   prefilledBalance?: number; // Preselected remaining balance
   onSuccess: (paymentId: string, paymentNumber: string) => void;
   onCancel: () => void;
+  mode?: "SUPPLIER" | "CUSTOMER";
 }
 
 export default function PaymentForm({
-  suppliers = [],
+  contacts = [],
   purchaseId = "",
+  saleId = "",
   contactId = "",
   prefilledBalance,
   onSuccess,
   onCancel,
+  mode = "SUPPLIER",
 }: PaymentFormProps) {
-  const [pendingPurchases, setPendingPurchases] = useState<PendingPurchase[]>([]);
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string>(contactId);
-  const [selectedPurchaseId, setSelectedPurchaseId] = useState<string>(purchaseId);
-  const [selectedPurchase, setSelectedPurchase] = useState<PendingPurchase | null>(null);
-  
-  const [loadingPurchases, setLoadingPurchases] = useState(false);
+  const [pendingInvoices, setPendingInvoices] = useState<PendingInvoice[]>([]);
+  const [selectedContactId, setSelectedContactId] = useState<string>(contactId);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>(mode === "SUPPLIER" ? purchaseId : saleId);
+  const [selectedInvoice, setSelectedInvoice] = useState<PendingInvoice | null>(null);
+
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const isPrefilledMode = !!purchaseId;
+  const isPrefilledMode = mode === "SUPPLIER" ? !!purchaseId : !!saleId;
+  const isSupplier = mode === "SUPPLIER";
 
   // React Hook Form
   const {
@@ -63,10 +75,11 @@ export default function PaymentForm({
     watch,
     formState: { errors },
   } = useForm<any>({
-    resolver: zodResolver(createPaymentSchema),
+    resolver: zodResolver(isSupplier ? createPaymentSchema : createReceiptSchema),
     defaultValues: {
       contactId: contactId,
-      purchaseId: purchaseId,
+      purchaseId: isSupplier ? purchaseId : undefined,
+      saleId: !isSupplier ? saleId : undefined,
       amount: prefilledBalance || 0,
       paymentDate: dayjs(new Date()).format("YYYY-MM-DD"),
       paymentMethod: "CASH",
@@ -75,98 +88,104 @@ export default function PaymentForm({
     },
   });
 
-  const amountWatch = watch("amount");
-
-  // Fetch pending purchases when selectedSupplierId changes (only in generic mode)
+  // Fetch pending invoices when selectedContactId changes (only in generic selection mode)
   useEffect(() => {
-    if (isPrefilledMode || !selectedSupplierId) {
-      setPendingPurchases([]);
+    if (isPrefilledMode || !selectedContactId) {
+      setPendingInvoices([]);
       return;
     }
 
     async function loadPendingBills() {
       try {
-        setLoadingPurchases(true);
-        const res = await getPendingSupplierPurchases(selectedSupplierId);
+        setLoadingInvoices(true);
+        const res = isSupplier
+          ? await getPendingSupplierPurchases(selectedContactId)
+          : await getPendingCustomerSales(selectedContactId);
+
         if (res.success && res.data) {
-          setPendingPurchases(res.data);
-          
-          // Clear purchase if not in list
-          if (!res.data.find((p) => p.id === selectedPurchaseId)) {
-            setSelectedPurchaseId("");
-            setValue("purchaseId", "");
-            setSelectedPurchase(null);
+          setPendingInvoices(res.data);
+
+          // Clear invoice if not in list
+          if (!res.data.find((p: any) => p.id === selectedInvoiceId)) {
+            setSelectedInvoiceId("");
+            setValue(isSupplier ? "purchaseId" : "saleId", "");
+            setSelectedInvoice(null);
             setValue("amount", 0);
           }
         } else {
-          toast.error(res.error || "Failed to load supplier bills");
+          toast.error(res.error || `Failed to load ${isSupplier ? "supplier bills" : "customer sales"}`);
         }
       } catch (err) {
         console.error(err);
-        toast.error("An error occurred loading bills");
+        toast.error("An error occurred loading pending invoices");
       } finally {
-        setLoadingPurchases(false);
+        setLoadingInvoices(false);
       }
     }
 
     loadPendingBills();
-  }, [selectedSupplierId, isPrefilledMode, selectedPurchaseId, setValue]);
+  }, [selectedContactId, isPrefilledMode, selectedInvoiceId, setValue, isSupplier]);
 
-  // Synchronize dynamic purchase details
+  // Synchronize dynamic invoice details
   useEffect(() => {
     if (isPrefilledMode) return;
 
-    const purchase = pendingPurchases.find((p) => p.id === selectedPurchaseId);
-    if (purchase) {
-      setSelectedPurchase(purchase);
-      setValue("amount", purchase.remainingBalance);
+    const invoice = pendingInvoices.find((p) => p.id === selectedInvoiceId);
+    if (invoice) {
+      setSelectedInvoice(invoice);
+      setValue("amount", invoice.remainingBalance);
     } else {
-      setSelectedPurchase(null);
+      setSelectedInvoice(null);
       setValue("amount", 0);
     }
-  }, [selectedPurchaseId, pendingPurchases, isPrefilledMode, setValue]);
+  }, [selectedInvoiceId, pendingInvoices, isPrefilledMode, setValue]);
 
   // Save selected values back to Form
-  const handleSupplierChange = (id: string) => {
-    setSelectedSupplierId(id);
+  const handleContactChange = (id: string) => {
+    setSelectedContactId(id);
     setValue("contactId", id, { shouldValidate: true });
   };
 
-  const handlePurchaseChange = (id: string) => {
-    setSelectedPurchaseId(id);
-    setValue("purchaseId", id, { shouldValidate: true });
+  const handleInvoiceChange = (id: string) => {
+    setSelectedInvoiceId(id);
+    setValue(isSupplier ? "purchaseId" : "saleId", id, { shouldValidate: true });
   };
 
-  const onSubmit = (values: CreatePaymentFormValues) => {
+  const onSubmit = (values: any) => {
     // Client-side safety balance check
     const currentBalance = isPrefilledMode
       ? (prefilledBalance ?? 0)
-      : (selectedPurchase?.remainingBalance ?? 0);
+      : (selectedInvoice?.remainingBalance ?? 0);
 
     if (values.amount > currentBalance + 0.01) {
       toast.error(
-        `Payment amount (₹${values.amount.toFixed(2)}) exceeds the remaining balance (₹${currentBalance.toFixed(2)}).`
+        `Transaction amount (₹${values.amount.toFixed(2)}) exceeds the remaining balance (₹${currentBalance.toFixed(2)}).`
       );
       return;
     }
 
     startTransition(async () => {
-      const res = await createSupplierPaymentAction(values);
+      const res = isSupplier
+        ? await createSupplierPaymentAction(values)
+        : await createCustomerReceiptAction(values);
+
       if (res.success && res.data) {
-        toast.success("Payment recorded successfully!");
+        toast.success(isSupplier ? "Payment recorded successfully!" : "Receipt recorded successfully!");
         onSuccess(res.data.id, res.data.paymentNumber);
       } else {
-        toast.error(res.error || "Failed to save payment.");
+        toast.error(res.error || "Failed to save transaction.");
       }
     });
   };
 
-  // Convert pending purchases to dropdown options
-  const purchaseOptions: DropdownOption[] = pendingPurchases.map((p) => {
-    const dateStr = dayjs(p.purchaseDate).format("DD MMM YYYY");
+  // Convert pending invoices to dropdown options
+  const invoiceOptions: DropdownOption[] = pendingInvoices.map((p) => {
+    const rawDate = isSupplier ? p.purchaseDate : p.saleDate;
+    const dateStr = dayjs(rawDate).format("DD MMM YYYY");
+    const num = isSupplier ? p.purchaseNumber : p.saleNumber;
     return {
       id: p.id,
-      name: `${p.purchaseNumber} (Grand Total: ₹${p.grandTotal})`,
+      name: `${num} (Grand Total: ₹${p.grandTotal})`,
       subtext: `Date: ${dateStr} • Balance: ₹${p.remainingBalance}`,
     };
   });
@@ -180,35 +199,35 @@ export default function PaymentForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 text-left">
-      {/* 1. Supplier Selector */}
+      {/* 1. Contact Selector */}
       {isPrefilledMode ? (
         <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-850">
           <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-            Supplier
+            {isSupplier ? "Supplier" : "Customer"}
           </span>
           <span className="text-sm font-bold text-slate-900 dark:text-slate-50 mt-0.5 block">
-            {suppliers.find((s) => s.id === contactId)?.name || "Selected Supplier"}
+            {contacts.find((s) => s.id === contactId)?.name || (isSupplier ? "Selected Supplier" : "Selected Customer")}
           </span>
         </div>
       ) : (
         <div>
           <ContactSelector
-            contacts={suppliers}
-            selectedKey={selectedSupplierId}
-            onSelectionChange={handleSupplierChange}
-            label="Supplier"
-            placeholder="Search and choose supplier"
+            contacts={contacts}
+            selectedKey={selectedContactId}
+            onSelectionChange={handleContactChange}
+            label={isSupplier ? "Supplier" : "Customer"}
+            placeholder={isSupplier ? "Search and choose supplier" : "Search and choose customer"}
             isInvalid={!!errors.contactId}
             errorMessage={errors.contactId?.message ? String(errors.contactId.message) : undefined}
           />
         </div>
       )}
 
-      {/* 2. Purchase Invoice Selector */}
+      {/* 2. Ref Invoice Selector */}
       {isPrefilledMode ? (
         <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-850">
           <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-            Ref Purchase Invoice
+            {isSupplier ? "Ref Purchase Invoice" : "Ref Sales Invoice"}
           </span>
           <span className="text-sm font-bold text-slate-900 dark:text-slate-50 mt-0.5 block">
             Invoice Balance Due: ₹{(prefilledBalance ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -217,22 +236,26 @@ export default function PaymentForm({
       ) : (
         <div>
           <DropdownSelector
-            options={purchaseOptions}
-            selectedId={selectedPurchaseId}
-            onChange={handlePurchaseChange}
-            label="Select Pending Purchase Invoice"
+            options={invoiceOptions}
+            selectedId={selectedInvoiceId}
+            onChange={handleInvoiceChange}
+            label={isSupplier ? "Select Pending Purchase Invoice" : "Select Pending Sales Invoice"}
             placeholder={
-              !selectedSupplierId
-                ? "Select a supplier first"
-                : loadingPurchases
+              !selectedContactId
+                ? `Select a ${isSupplier ? "supplier" : "customer"} first`
+                : loadingInvoices
                 ? "Loading pending invoices..."
-                : pendingPurchases.length === 0
-                ? "No pending invoices found for this supplier"
-                : "Choose purchase bill to settle"
+                : pendingInvoices.length === 0
+                ? `No pending invoices found for this ${isSupplier ? "supplier" : "customer"}`
+                : `Choose ${isSupplier ? "purchase bill" : "sale invoice"} to settle`
             }
-            isInvalid={!!errors.purchaseId}
-            errorMessage={errors.purchaseId?.message ? String(errors.purchaseId.message) : undefined}
-            className={!selectedSupplierId ? "opacity-60 pointer-events-none" : ""}
+            isInvalid={isSupplier ? !!errors.purchaseId : !!errors.saleId}
+            errorMessage={
+              isSupplier
+                ? (errors.purchaseId?.message ? String(errors.purchaseId.message) : undefined)
+                : (errors.saleId?.message ? String(errors.saleId.message) : undefined)
+            }
+            className={!selectedContactId ? "opacity-60 pointer-events-none" : ""}
           />
         </div>
       )}
@@ -243,7 +266,7 @@ export default function PaymentForm({
         control={control}
         render={({ field }) => (
           <CurrencyInput
-            label="Payment Amount"
+            label={isSupplier ? "Payment Amount" : "Receipt Amount"}
             value={field.value}
             onChange={field.onChange}
             error={errors.amount}
@@ -255,7 +278,7 @@ export default function PaymentForm({
         {/* Date Input */}
         <TextField isInvalid={!!errors.paymentDate} className="flex flex-col gap-1 w-full">
           <Label className="text-sm font-semibold text-slate-700 dark:text-slate-350">
-            Payment Date
+            {isSupplier ? "Payment Date" : "Receipt Date"}
           </Label>
           <Input
             type="date"
@@ -333,7 +356,7 @@ export default function PaymentForm({
           isPending={isPending}
           className="font-bold rounded-xl px-5"
         >
-          {isPending ? "Recording..." : "Record Payment"}
+          {isPending ? "Recording..." : (isSupplier ? "Record Payment" : "Record Receipt")}
         </Button>
       </div>
     </form>

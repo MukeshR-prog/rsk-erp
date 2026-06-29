@@ -447,7 +447,7 @@ export default function PurchaseDetailsPage({ params }: PageProps) {
               </ModalHeader>
               <ModalBody>
                 <PaymentForm
-                  suppliers={[{ id: purchase.supplierId, name: purchase.supplierName, type: "SUPPLIER" }]}
+                  contacts={[{ id: purchase.supplierId, name: purchase.supplierName, type: "SUPPLIER" }]}
                   contactId={purchase.supplierId}
                   purchaseId={purchase.id}
                   prefilledBalance={purchase.remainingBalance}

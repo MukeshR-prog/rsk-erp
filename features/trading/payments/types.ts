@@ -1,22 +1,27 @@
+import { PaymentType, PaymentMethod, PaymentStatus } from "@prisma/client";
+
 export interface PaymentFilters {
   page?: number;
   limit?: number;
   search?: string;
   contactId?: string;
-  paymentMethod?: "CASH" | "BANK_TRANSFER" | "UPI" | "CHEQUE";
+  paymentMethod?: PaymentMethod;
   startDate?: string;
   endDate?: string;
-  status?: "COMPLETED" | "CANCELLED";
+  status?: PaymentStatus;
+  paymentType?: PaymentType;
 }
 
 export interface CreateSupplierPaymentDTO {
   contactId: string;
-  purchaseId: string;
+  purchaseId?: string;
+  saleId?: string;
   amount: number;
   paymentDate: string; // ISO String
-  paymentMethod: "CASH" | "BANK_TRANSFER" | "UPI" | "CHEQUE";
+  paymentMethod: PaymentMethod;
   referenceNumber?: string;
   notes?: string;
+  paymentType: PaymentType;
 }
 
 export interface CancelSupplierPaymentDTO {

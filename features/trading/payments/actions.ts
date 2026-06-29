@@ -36,7 +36,7 @@ export async function getSupplierPayments(filters: PaymentFilters) {
     const skip = (page - 1) * limit;
 
     const where: Prisma.PaymentWhereInput = {
-      paymentType: "SUPPLIER_PAYMENT",
+      paymentType: filters.paymentType || "SUPPLIER_PAYMENT",
     };
 
     if (filters.contactId) {
@@ -104,6 +104,12 @@ export async function getSupplierPayments(filters: PaymentFilters) {
               grandTotal: true,
             },
           },
+          sale: {
+            select: {
+              saleNumber: true,
+              grandTotal: true,
+            },
+          },
         },
         orderBy: {
           paymentDate: "desc",
@@ -115,13 +121,19 @@ export async function getSupplierPayments(filters: PaymentFilters) {
     ]);
 
     // Format Decimal values to Numbers
-    const formattedPayments = payments.map((p) => ({
+    const formattedPayments = payments.map((p: any) => ({
       ...p,
       amount: Number(p.amount),
       purchase: p.purchase
         ? {
             ...p.purchase,
             grandTotal: Number(p.purchase.grandTotal),
+          }
+        : null,
+      sale: p.sale
+        ? {
+            ...p.sale,
+            grandTotal: Number(p.sale.grandTotal),
           }
         : null,
     }));
@@ -173,10 +185,21 @@ export async function getSupplierPayment(id: string) {
             paymentStatus: true,
           },
         },
+        sale: {
+          select: {
+            saleNumber: true,
+            saleDate: true,
+            grandTotal: true,
+            subtotal: true,
+            discount: true,
+            transportCharges: true,
+            paymentStatus: true,
+          },
+        },
       },
     });
 
-    if (!payment || payment.paymentType !== "SUPPLIER_PAYMENT") {
+    if (!payment) {
       return { success: false, error: "Payment record not found." };
     }
 
@@ -190,6 +213,15 @@ export async function getSupplierPayment(id: string) {
             subtotal: Number(payment.purchase.subtotal),
             discount: Number(payment.purchase.discount),
             transportCharges: Number(payment.purchase.transportCharges),
+          }
+        : null,
+      sale: payment.sale
+        ? {
+            ...payment.sale,
+            grandTotal: Number(payment.sale.grandTotal),
+            subtotal: Number(payment.sale.subtotal),
+            discount: Number(payment.sale.discount),
+            transportCharges: Number(payment.sale.transportCharges),
           }
         : null,
     };
@@ -425,18 +457,71 @@ export async function getPendingSupplierPurchases(supplierId: string) {
 }
 
 /**
- * Fetch KPI metrics for the Supplier Payments Dashboard.
+ * Fetch a list of pending/completed sales with remaining balances for a customer.
  */
-export async function getPaymentDashboardMetrics() {
+export async function getPendingCustomerSales(customerId: string) {
+  try {
+    const sales = await prisma.sale.findMany({
+      where: {
+        customerId,
+        status: "COMPLETED",
+        paymentStatus: {
+          in: ["UNPAID", "PARTIALLY_PAID"],
+        },
+      },
+      orderBy: {
+        saleDate: "asc",
+      },
+    });
+
+    const formatted = [];
+    for (const s of sales) {
+      const paidSum = await prisma.payment.aggregate({
+        where: {
+          saleId: s.id,
+          paymentType: "CUSTOMER_RECEIPT",
+          status: "COMPLETED",
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+      const totalPaid = Number(paidSum._sum.amount || 0);
+      const remainingBalance = Math.max(0, Number(s.grandTotal) - totalPaid);
+
+      if (remainingBalance > 0) {
+        formatted.push({
+          id: s.id,
+          saleNumber: s.saleNumber,
+          saleDate: s.saleDate,
+          grandTotal: Number(s.grandTotal),
+          remainingBalance,
+        });
+      }
+    }
+
+    return { success: true, data: formatted };
+  } catch (err: any) {
+    console.error("getPendingCustomerSales failed:", err);
+    return { success: false, error: err.message || "Failed to retrieve pending sales." };
+  }
+}
+
+/**
+ * Fetch KPI metrics for the Payments Dashboard (Supplier or Customer).
+ */
+export async function getPaymentDashboardMetrics(type: "SUPPLIER" | "CUSTOMER" = "SUPPLIER") {
   try {
     const today = new Date();
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
-    // 1. Today's Supplier Payments
+    const paymentType = type === "SUPPLIER" ? "SUPPLIER_PAYMENT" : "CUSTOMER_RECEIPT";
+
+    // 1. Today's Payments
     const todayPayments = await prisma.payment.aggregate({
       where: {
-        paymentType: "SUPPLIER_PAYMENT",
+        paymentType,
         status: "COMPLETED",
         paymentDate: {
           gte: startOfToday,
@@ -448,10 +533,10 @@ export async function getPaymentDashboardMetrics() {
       },
     });
 
-    // 2. Total Settled / Paid
+    // 2. Total Paid/Collected
     const totalPayments = await prisma.payment.aggregate({
       where: {
-        paymentType: "SUPPLIER_PAYMENT",
+        paymentType,
         status: "COMPLETED",
       },
       _sum: {
@@ -459,44 +544,81 @@ export async function getPaymentDashboardMetrics() {
       },
     });
 
-    // 3. Pending Bills (Count of UNPAID and PARTIALLY_PAID purchases)
-    const pendingBillsCount = await prisma.purchase.count({
-      where: {
-        status: "COMPLETED",
-        paymentStatus: {
-          in: ["UNPAID", "PARTIALLY_PAID"],
+    if (type === "SUPPLIER") {
+      const pendingBillsCount = await prisma.purchase.count({
+        where: {
+          status: "COMPLETED",
+          paymentStatus: {
+            in: ["UNPAID", "PARTIALLY_PAID"],
+          },
         },
-      },
-    });
+      });
 
-    // 4. Suppliers with Outstanding (Count of contacts with type SUPPLIER and outstanding > 0)
-    const suppliers = await prisma.contact.findMany({
-      where: {
-        type: "SUPPLIER",
-        isActive: true,
-      },
-      select: {
-        id: true,
-      },
-    });
+      const suppliers = await prisma.contact.findMany({
+        where: {
+          type: "SUPPLIER",
+          isActive: true,
+        },
+        select: {
+          id: true,
+        },
+      });
 
-    let suppliersWithOutstanding = 0;
-    for (const s of suppliers) {
-      const outstanding = await LedgerService.getSupplierOutstanding(s.id, prisma);
-      if (outstanding > 0.01) {
-        suppliersWithOutstanding++;
+      let suppliersWithOutstanding = 0;
+      for (const s of suppliers) {
+        const outstanding = await LedgerService.getSupplierOutstanding(s.id, prisma);
+        if (outstanding > 0.01) {
+          suppliersWithOutstanding++;
+        }
       }
-    }
 
-    return {
-      success: true,
-      data: {
-        todayPayments: Number(todayPayments._sum.amount || 0),
-        totalPayments: Number(totalPayments._sum.amount || 0),
-        pendingBillsCount,
-        suppliersWithOutstanding,
-      },
-    };
+      return {
+        success: true,
+        data: {
+          todayPayments: Number(todayPayments._sum.amount || 0),
+          totalPayments: Number(totalPayments._sum.amount || 0),
+          pendingBillsCount,
+          suppliersWithOutstanding,
+        },
+      };
+    } else {
+      const pendingBillsCount = await prisma.sale.count({
+        where: {
+          status: "COMPLETED",
+          paymentStatus: {
+            in: ["UNPAID", "PARTIALLY_PAID"],
+          },
+        },
+      });
+
+      const customers = await prisma.contact.findMany({
+        where: {
+          type: "CUSTOMER",
+          isActive: true,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      let suppliersWithOutstanding = 0; // represent customers with outstanding
+      for (const c of customers) {
+        const outstanding = await LedgerService.getCustomerOutstanding(c.id, prisma);
+        if (outstanding > 0.01) {
+          suppliersWithOutstanding++;
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          todayPayments: Number(todayPayments._sum.amount || 0),
+          totalPayments: Number(totalPayments._sum.amount || 0),
+          pendingBillsCount,
+          suppliersWithOutstanding,
+        },
+      };
+    }
   } catch (error: any) {
     console.error("getPaymentDashboardMetrics failed:", error);
     return {
@@ -530,6 +652,33 @@ export async function getSuppliersForPayments() {
   } catch (err: any) {
     console.error("getSuppliersForPayments failed:", err);
     return { success: false, error: err.message || "Failed to load suppliers list." };
+  }
+}
+
+/**
+ * Fetch all active customers for selector.
+ */
+export async function getCustomersForPayments() {
+  try {
+    const customers = await prisma.contact.findMany({
+      where: {
+        type: "CUSTOMER",
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        phone: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+    return { success: true, data: customers };
+  } catch (err: any) {
+    console.error("getCustomersForPayments failed:", err);
+    return { success: false, error: err.message || "Failed to load customers list." };
   }
 }
 

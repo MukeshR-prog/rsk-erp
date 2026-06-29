@@ -76,9 +76,9 @@ export default function TradingDashboardPage() {
     { title: "Today's Payments", value: `₹${metrics.todayPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Cleared vendor payments today" },
     { title: "Supplier Outstanding", value: `₹${metrics.supplierOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Total unpaid supplier bills" },
     { title: "Current Stock Value", value: `₹${metrics.currentStockValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Weighted stock valuation" },
-    { title: "Today's Sales", value: "₹0.00", subtitle: "Coming soon in Sales phase", isComingSoon: true },
-    { title: "Today's Collections", value: "₹0.00", subtitle: "Coming soon in Sales phase", isComingSoon: true },
-    { title: "Customer Outstanding", value: "₹0.00", subtitle: "Coming soon in Sales phase", isComingSoon: true },
+    { title: "Today's Sales", value: `₹${metrics.todaySales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Logged sales today" },
+    { title: "Today's Collections", value: `₹${metrics.todayCollections.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Cleared customer collections today" },
+    { title: "Customer Outstanding", value: `₹${metrics.customerOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Total unpaid customer invoices" },
     { title: "Low Stock Items", value: `${metrics.lowStockCount} Items`, subtitle: "Current inventory warnings" },
   ];
 
@@ -106,11 +106,7 @@ export default function TradingDashboardPage() {
         {kpis.map((kpi) => (
           <Card
             key={kpi.title}
-            className={`border-l-4 ${
-              kpi.isComingSoon
-                ? "border-l-slate-200 dark:border-l-slate-800 opacity-60"
-                : "border-l-slate-900 dark:border-l-slate-100"
-            }`}
+            className="border-l-4 border-l-slate-900 dark:border-l-slate-100"
             title={kpi.title}
             subtitle={kpi.subtitle}
           >
@@ -135,25 +131,27 @@ export default function TradingDashboardPage() {
               </Button>
             </Link>
 
-            <Button
-              variant="tertiary"
-              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855 opacity-50"
-              onPress={() => handleShortcutClick("New Sale")}
-            >
-              <TrendingUp className="w-5 h-5 text-slate-805 dark:text-slate-205" />
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">New Sale (Lock)</span>
-            </Button>
+            <Link href="/trading/sales?new=true" className="w-full">
+              <Button
+                variant="tertiary"
+                className="h-20 w-full flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855"
+              >
+                <TrendingUp className="w-5 h-5 text-slate-805 dark:text-slate-205" />
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">New Sale</span>
+              </Button>
+            </Link>
 
-            <Button
-              variant="tertiary"
-              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855 opacity-50"
-              onPress={() => handleShortcutClick("Receive Payment")}
-            >
-              <CreditCard className="w-5 h-5 text-slate-805 dark:text-slate-205" />
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Receive Payment</span>
-            </Button>
+            <Link href="/trading/payments?new=true&mode=CUSTOMER" className="w-full">
+              <Button
+                variant="tertiary"
+                className="h-20 w-full flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855"
+              >
+                <CreditCard className="w-5 h-5 text-slate-805 dark:text-slate-205" />
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Receive Payment</span>
+              </Button>
+            </Link>
 
-            <Link href="/trading/payments?new=true" className="w-full">
+            <Link href="/trading/payments?new=true&mode=SUPPLIER" className="w-full">
               <Button
                 variant="tertiary"
                 className="h-20 w-full flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855"
@@ -213,10 +211,10 @@ export default function TradingDashboardPage() {
           )}
         </Card>
 
-        {/* Recent Payments */}
-        <Card title="Recent Supplier Payments" subtitle="Latest settlements registered">
+        {/* Recent Payments & Collections */}
+        <Card title="Recent Payments & Receipts" subtitle="Latest transactions registered">
           {recentPayments.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-400">No payment receipts registered yet.</div>
+            <div className="py-8 text-center text-xs text-slate-400">No transactions registered yet.</div>
           ) : (
             <div className="flex flex-col gap-3.5">
               {recentPayments.map((p: any) => (
@@ -280,8 +278,8 @@ export default function TradingDashboardPage() {
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div className="flex flex-col text-left">
-                  <span className="text-sm font-bold text-slate-905 dark:text-slate-50">Supplier Payments</span>
-                  <span className="text-xs text-slate-450 dark:text-slate-500 mt-0.5">Settle supplier bills</span>
+                  <span className="text-sm font-bold text-slate-905 dark:text-slate-50">Payments & Receipts</span>
+                  <span className="text-xs text-slate-450 dark:text-slate-500 mt-0.5">Log settlements</span>
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />

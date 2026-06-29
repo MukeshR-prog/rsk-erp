@@ -26,6 +26,7 @@ import {
   getSupplierPayments,
   getPaymentDashboardMetrics,
   getSuppliersForPayments,
+  getCustomersForPayments,
   cancelSupplierPaymentAction,
 } from "@/features/trading/payments/actions";
 import PaymentHistoryTable from "@/components/erp/payments/PaymentHistoryTable";
@@ -45,7 +46,7 @@ interface PaymentItem {
   cancellationReason?: string | null;
 }
 
-interface SupplierOption {
+interface ContactOption {
   id: string;
   name: string;
   type: string;
@@ -63,9 +64,12 @@ function PaymentsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Mode tab state: SUPPLIER or CUSTOMER
+  const [mode, setMode] = useState<"SUPPLIER" | "CUSTOMER">("SUPPLIER");
+
   // Filters state
   const [payments, setPayments] = useState<PaymentItem[]>([]);
-  const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
+  const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     todayPayments: 0,
     totalPayments: 0,
@@ -76,43 +80,49 @@ function PaymentsPageContent() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   const [search, setSearch] = useState("");
-  const [selectedSupplierId, setSelectedSupplierId] = useState("");
+  const [selectedContactId, setSelectedContactId] = useState("");
   const [selectedMethod, setSelectedMethod] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [activeTab, setActiveTab] = useState<"ALL" | "COMPLETED" | "CANCELLED">("ALL");
+  const [statusTab, setStatusTab] = useState<"ALL" | "COMPLETED" | "CANCELLED">("ALL");
 
   // Modals state
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [cancellingPayment, setCancellingPayment] = useState<PaymentItem | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
-  
+
   const [isPending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
 
-  // Sync route prefill "new=true" or preselected supplier / purchase
+  // Sync route prefill "new=true" or preselected contact
   useEffect(() => {
     if (searchParams.get("new") === "true") {
       setIsNewModalOpen(true);
     }
-    const supplierParam = searchParams.get("supplierId");
-    if (supplierParam) {
-      setSelectedSupplierId(supplierParam);
+    const contactParam = searchParams.get("contactId");
+    if (contactParam) {
+      setSelectedContactId(contactParam);
+    }
+    const modeParam = searchParams.get("mode");
+    if (modeParam === "CUSTOMER" || modeParam === "SUPPLIER") {
+      setMode(modeParam);
     }
   }, [searchParams]);
 
-  // Load suppliers list
+  // Load contacts list when mode changes
   useEffect(() => {
-    async function loadSuppliers() {
-      const res = await getSuppliersForPayments();
+    async function loadContacts() {
+      const res = mode === "SUPPLIER" ? await getSuppliersForPayments() : await getCustomersForPayments();
       if (res.success && res.data) {
-        setSuppliers(res.data);
+        setContacts(res.data);
       }
     }
-    loadSuppliers();
-  }, []);
+    setSelectedContactId("");
+    setPage(1);
+    loadContacts();
+  }, [mode]);
 
   // Fetch payments list and dashboard metrics
   const fetchDashboardData = async () => {
@@ -123,13 +133,14 @@ function PaymentsPageContent() {
           page,
           limit: 10,
           search: search || undefined,
-          contactId: selectedSupplierId || undefined,
+          contactId: selectedContactId || undefined,
           paymentMethod: (selectedMethod as any) || undefined,
           startDate: startDate || undefined,
           endDate: endDate || undefined,
-          status: activeTab === "ALL" ? undefined : activeTab,
+          status: statusTab === "ALL" ? undefined : statusTab,
+          paymentType: mode === "SUPPLIER" ? "SUPPLIER_PAYMENT" : "CUSTOMER_RECEIPT",
         }),
-        getPaymentDashboardMetrics(),
+        getPaymentDashboardMetrics(mode),
       ]);
 
       if (paymentsRes.success && paymentsRes.data) {
@@ -137,7 +148,7 @@ function PaymentsPageContent() {
         setTotal(paymentsRes.meta?.total || 0);
         setTotalPages(paymentsRes.meta?.totalPages || 1);
       } else {
-        toast.error(paymentsRes.error || "Failed to load payments");
+        toast.error(paymentsRes.error || "Failed to load transactions");
       }
 
       if (metricsRes.success && metricsRes.data) {
@@ -145,7 +156,7 @@ function PaymentsPageContent() {
       }
     } catch (err) {
       console.error(err);
-      toast.error("An error occurred loading dashboard data");
+      toast.error("An error occurred loading ledger data");
     } finally {
       setLoading(false);
     }
@@ -153,7 +164,7 @@ function PaymentsPageContent() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [page, search, selectedSupplierId, selectedMethod, startDate, endDate, activeTab]);
+  }, [page, search, selectedContactId, selectedMethod, startDate, endDate, statusTab, mode]);
 
   const handleCancelPaymentSubmit = () => {
     if (!cancellingPayment) return;
@@ -165,12 +176,12 @@ function PaymentsPageContent() {
     startTransition(async () => {
       const res = await cancelSupplierPaymentAction(cancellingPayment.id, cancellationReason);
       if (res.success) {
-        toast.success("Payment cancelled successfully.");
+        toast.success("Transaction cancelled successfully.");
         setCancellingPayment(null);
         setCancellationReason("");
         fetchDashboardData();
       } else {
-        toast.error(res.error || "Failed to cancel payment.");
+        toast.error(res.error || "Failed to cancel transaction.");
       }
     });
   };
@@ -182,11 +193,11 @@ function PaymentsPageContent() {
 
   const handleClearFilters = () => {
     setSearch("");
-    setSelectedSupplierId("");
+    setSelectedContactId("");
     setSelectedMethod("");
     setStartDate("");
     setEndDate("");
-    setActiveTab("ALL");
+    setStatusTab("ALL");
     setPage(1);
     router.replace("/trading/payments");
   };
@@ -195,8 +206,8 @@ function PaymentsPageContent() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <Header
-        title="Supplier Payments"
-        subtitle="Log and track supplier bill settlements"
+        title="Payments & Receipts Ledger"
+        subtitle="Log and track customer receipts and supplier disbursements"
         action={
           <Button
             variant="primary"
@@ -205,16 +216,29 @@ function PaymentsPageContent() {
             size="md"
           >
             <Plus className="w-4.5 h-4.5 mr-1.5" />
-            <span>Record Supplier Payment</span>
+            <span>{mode === "SUPPLIER" ? "Record Supplier Payment" : "Record Customer Receipt"}</span>
           </Button>
         }
       />
 
+      {/* Main Tab Switcher */}
+      <div className="border-b border-slate-200 dark:border-slate-800">
+        <Tabs
+          selectedKey={mode}
+          onSelectionChange={(key) => setMode(key as any)}
+          aria-label="Payment Mode Tabs"
+          className="w-full"
+        >
+          <Tab key="SUPPLIER">Supplier Payments</Tab>
+          <Tab key="CUSTOMER">Customer Receipts</Tab>
+        </Tabs>
+      </div>
+
       {/* KPI Widgets */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card
-          title="Today's Payments"
-          subtitle="Cleared payments today"
+          title={mode === "SUPPLIER" ? "Today's Payments" : "Today's Collections"}
+          subtitle="Cleared today"
           className="border-l-4 border-l-slate-900 dark:border-l-slate-100"
         >
           <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white block mt-1">
@@ -223,8 +247,8 @@ function PaymentsPageContent() {
         </Card>
 
         <Card
-          title="Total Paid Settled"
-          subtitle="Cumulative settlements"
+          title={mode === "SUPPLIER" ? "Total Paid Settled" : "Total Collected"}
+          subtitle="Cumulative total"
           className="border-l-4 border-l-green-600"
         >
           <span className="text-xl sm:text-2xl font-bold tracking-tight text-green-600 dark:text-green-400 block mt-1">
@@ -233,8 +257,8 @@ function PaymentsPageContent() {
         </Card>
 
         <Card
-          title="Pending Bills"
-          subtitle="Outstanding invoices count"
+          title={mode === "SUPPLIER" ? "Pending Bills" : "Pending Invoices"}
+          subtitle="Unpaid count"
           className="border-l-4 border-l-amber-500"
         >
           <span className="text-xl sm:text-2xl font-bold tracking-tight text-amber-500 block mt-1">
@@ -243,18 +267,18 @@ function PaymentsPageContent() {
         </Card>
 
         <Card
-          title="Vendors Outstanding"
-          subtitle="Active suppliers count"
+          title={mode === "SUPPLIER" ? "Vendors Outstanding" : "Customers Outstanding"}
+          subtitle="Active profiles"
           className="border-l-4 border-l-rose-500"
         >
           <span className="text-xl sm:text-2xl font-bold tracking-tight text-rose-500 block mt-1">
-            {metrics.suppliersWithOutstanding} Vendors
+            {metrics.suppliersWithOutstanding} Accounts
           </span>
         </Card>
       </div>
 
       {/* Filters and List */}
-      <Card title="Payment Records Logs" subtitle="Query and filter payment receipts database">
+      <Card title="Transaction Records Logs" subtitle="Query and filter ERP transaction vouchers">
         <div className="flex flex-col gap-4">
           {/* Main filters grid */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
@@ -265,30 +289,30 @@ function PaymentsPageContent() {
                 <div className="relative">
                   <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                   <Input
-                    placeholder="Search payment number, ref #, or supplier..."
+                    placeholder={mode === "SUPPLIER" ? "Search payment number, ref #, or supplier..." : "Search receipt number, ref #, or customer..."}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm animate-none"
                   />
                 </div>
               </TextField>
             </div>
 
-            {/* Supplier Selector */}
+            {/* Selector */}
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase block mb-1">
-                Supplier
+                {mode === "SUPPLIER" ? "Supplier" : "Customer"}
               </label>
               <ContactSelector
-                contacts={suppliers}
-                selectedKey={selectedSupplierId}
-                onSelectionChange={setSelectedSupplierId}
-                placeholder="All Suppliers"
+                contacts={contacts}
+                selectedKey={selectedContactId}
+                onSelectionChange={setSelectedContactId}
+                placeholder={mode === "SUPPLIER" ? "All Suppliers" : "All Customers"}
                 label=""
               />
             </div>
 
-            {/* Payment Method */}
+            {/* Method */}
             <div className="flex flex-col gap-1 w-full">
               <label className="text-xs font-semibold text-slate-500 uppercase block mb-1">
                 Method
@@ -298,7 +322,7 @@ function PaymentsPageContent() {
                 onChange={(e) => setSelectedMethod(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm h-10"
               >
-                <option value="">All Payment Methods</option>
+                <option value="">All Methods</option>
                 <option value="CASH">Cash</option>
                 <option value="BANK_TRANSFER">Bank Transfer</option>
                 <option value="UPI">UPI</option>
@@ -353,11 +377,11 @@ function PaymentsPageContent() {
           {/* Status Tabs */}
           <div className="border-b border-slate-100 dark:border-slate-850 mt-2">
             <Tabs
-              selectedKey={activeTab}
-              onSelectionChange={(key) => setActiveTab(key as any)}
+              selectedKey={statusTab}
+              onSelectionChange={(key) => setStatusTab(key as any)}
               aria-label="Payment Status Filters"
             >
-              <Tab key="ALL">All Payments</Tab>
+              <Tab key="ALL">All Records</Tab>
               <Tab key="COMPLETED">Completed</Tab>
               <Tab key="CANCELLED">Cancelled</Tab>
             </Tabs>
@@ -366,7 +390,7 @@ function PaymentsPageContent() {
           {/* Table list */}
           {loading ? (
             <div className="text-center py-12 text-slate-500 font-medium">
-              Loading payment receipts logs...
+              Loading ledger data...
             </div>
           ) : (
             <div className="flex flex-col gap-4">
@@ -379,7 +403,7 @@ function PaymentsPageContent() {
               {totalPages > 1 && (
                 <div className="flex justify-between items-center mt-4 border-t border-slate-50 dark:border-slate-900 pt-4">
                   <span className="text-xs text-slate-450 dark:text-slate-500 font-medium">
-                    Showing {(page - 1) * 10 + 1} - {Math.min(page * 10, total)} of {total} payments
+                    Showing {(page - 1) * 10 + 1} - {Math.min(page * 10, total)} of {total} items
                   </span>
                   <div className="flex gap-2">
                     <Button
@@ -411,17 +435,18 @@ function PaymentsPageContent() {
         </div>
       </Card>
 
-      {/* New Supplier Payment Modal */}
+      {/* Record Payment/Receipt Modal */}
       <Modal isOpen={isNewModalOpen} onOpenChange={(open) => { if (!open) setIsNewModalOpen(false); }}>
         <ModalBackdrop />
         <ModalContainer>
           <ModalDialog className="bg-white dark:bg-slate-950 p-6 rounded-2xl max-w-lg w-full">
             <ModalHeader className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-850 pb-3 mb-4">
-              Record Supplier Payment
+              {mode === "SUPPLIER" ? "Record Supplier Payment" : "Record Customer Receipt"}
             </ModalHeader>
             <ModalBody>
               <PaymentForm
-                suppliers={suppliers}
+                mode={mode}
+                contacts={contacts}
                 onSuccess={handleCreateSuccess}
                 onCancel={() => setIsNewModalOpen(false)}
               />
@@ -430,18 +455,18 @@ function PaymentsPageContent() {
         </ModalContainer>
       </Modal>
 
-      {/* Cancel Payment Confirmation dialog */}
+      {/* Cancel Transaction dialog */}
       {cancellingPayment && (
         <Modal isOpen={!!cancellingPayment} onOpenChange={(open) => { if (!open) setCancellingPayment(null); }}>
           <ModalBackdrop />
           <ModalContainer>
             <ModalDialog className="bg-white dark:bg-slate-950 p-6 rounded-2xl max-w-md w-full text-left">
               <ModalHeader className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-850 pb-3 mb-4">
-                Cancel Payment Receipt
+                Cancel Voucher
               </ModalHeader>
               <ModalBody className="flex flex-col gap-4">
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                  Are you sure you want to cancel payment receipt{" "}
+                  Are you sure you want to cancel voucher{" "}
                   <strong className="text-slate-900 dark:text-white">
                     {cancellingPayment.paymentNumber}
                   </strong>{" "}
@@ -449,7 +474,7 @@ function PaymentsPageContent() {
                   {cancellingPayment.amount.toLocaleString("en-IN", {
                     minimumFractionDigits: 2,
                   })}
-                  ? This will increase the supplier's outstanding invoice balance.
+                  ? This will increase the remaining unpaid balance of the invoice.
                 </p>
 
                 <TextField className="flex flex-col gap-1 w-full">
@@ -457,10 +482,10 @@ function PaymentsPageContent() {
                     Reason for Cancellation
                   </Label>
                   <Input
-                    placeholder="Enter why this payment is being cancelled"
+                    placeholder="Enter why this is being cancelled"
                     value={cancellationReason}
                     onChange={(e) => setCancellationReason(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm animate-none"
                   />
                 </TextField>
               </ModalBody>
@@ -481,7 +506,7 @@ function PaymentsPageContent() {
                   onPress={handleCancelPaymentSubmit}
                   className="font-bold rounded-xl px-5 bg-red-600 hover:bg-red-700 text-white"
                 >
-                  {isPending ? "Cancelling..." : "Cancel Payment"}
+                  {isPending ? "Cancelling..." : "Cancel Voucher"}
                 </Button>
               </ModalFooter>
             </ModalDialog>

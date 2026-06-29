@@ -47,11 +47,11 @@ export default function PaymentHistoryTable({
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="border-b border-slate-100 dark:border-slate-850 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-            <th className="py-3 px-4">Payment Date</th>
-            <th className="py-3 px-4">Payment No.</th>
+            <th className="py-3 px-4">Transaction Date</th>
+            <th className="py-3 px-4">Voucher No.</th>
             <th className="py-3 px-4">Method</th>
             <th className="py-3 px-4">Reference</th>
-            <th className="py-3 px-4 text-right">Amount Paid</th>
+            <th className="py-3 px-4 text-right">Amount</th>
             <th className="py-3 px-4 text-center">Status</th>
             <th className="py-3 px-4 text-center">Actions</th>
           </tr>

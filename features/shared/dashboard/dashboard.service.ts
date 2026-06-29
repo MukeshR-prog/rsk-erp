@@ -230,6 +230,8 @@ export const DashboardService = {
       },
     });
 
+    const todayCashFlow = todayCollections - todayPayments;
+
     return {
       metrics: {
         todayPurchases,
@@ -237,6 +239,7 @@ export const DashboardService = {
         monthlySales,
         todayPayments,
         todayCollections,
+        todayCashFlow,
         supplierOutstanding,
         customerOutstanding,
         currentStockValue,

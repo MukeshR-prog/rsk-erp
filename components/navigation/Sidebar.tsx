@@ -80,7 +80,7 @@ export default function Sidebar() {
     { label: "Suppliers", href: "/master-data/contacts?type=SUPPLIER", icon: Users },
     { label: "Purchases", href: "/trading/purchases", icon: ShoppingCart },
     { label: "Sales", href: "/trading/sales", icon: TrendingUp },
-    { label: "Supplier Payments", href: "/trading/payments", icon: TrendingDown },
+    { label: "Payments", href: "/trading/payments", icon: TrendingDown },
   ];
 
   const manufacturingItems = [

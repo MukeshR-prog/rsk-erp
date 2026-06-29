@@ -12,10 +12,11 @@ const pool = new pg.Pool({ connectionString: databaseUrl });
 const adapter = new PrismaPg(pool);
 
 export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    adapter,
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-  });
+  (globalForPrisma.prisma && (globalForPrisma.prisma as any).sale)
+    ? globalForPrisma.prisma
+    : new PrismaClient({
+        adapter,
+        log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+      });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
