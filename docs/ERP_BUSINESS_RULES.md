@@ -21,3 +21,15 @@ This document lists the absolute business rules and architecture constraints for
 
 * **Centralized Mutator Service**: The `Product.currentStock` and `Product.averageCost` values must never be updated directly by custom page logic or actions.
 * **Strict Stock Movements**: All inventory updates must be logged through the `InventoryService` (`features/inventory/inventory.service.ts`), which automatically writes a historical `StockMovement` entry and updates cached stock levels inside a database transaction.
+
+---
+
+## 3. Manufacturing & BOM Rules
+
+* **Finished Good Association**: Every Bill of Materials (BOM) recipe must target a product classified as a `FINISHED_GOOD` and it must be active.
+* **Raw Material Ingredients**: Constituent items in a BOM recipe must be classified as `RAW_MATERIAL` products, must be active, and must have quantities greater than zero.
+* **No Self-Inclusion**: A recipe's target finished product cannot be included as an ingredient in its own recipe.
+* **Unique Recipe Names**: Recipe names must be unique (case-insensitive) across the ERP system.
+* **Soft-Disable Only**: To prevent breaking historical records of completed production batches, BOM recipes cannot be deleted; they can only be deactivated (`isActive = false`). Deactivated recipes are hidden from production batch planning drop-downs.
+* **Centralized Database Transactions**: All creations, updates, and status toggles for recipes must execute inside a Prisma Transaction client.
+

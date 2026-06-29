@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import { Button } from "@heroui/react";
@@ -20,9 +21,10 @@ import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import Link from "next/link";
 
 export default function ManufacturingDashboardPage() {
+  const router = useRouter();
   const { setWorkspace } = useWorkspaceStore();
 
-  const [metrics, setMetrics] = useState({
+  const [metrics, setMetrics] = useState<any>({
     productionToday: 0,
     rawMaterialConsumption: 0,
     finishedGoodsProduced: 0,
@@ -30,6 +32,10 @@ export default function ManufacturingDashboardPage() {
     productionExpenses: 0,
     currentRawMaterialStock: 0,
     currentFinishedGoodsStock: 0,
+    totalRecipes: 0,
+    activeRecipes: 0,
+    finishedProductsCovered: 0,
+    recentlyUpdatedRecipes: [],
   });
 
   // Ensure workspace store matches routing context and fetch metrics
@@ -46,29 +52,32 @@ export default function ManufacturingDashboardPage() {
   }, [setWorkspace]);
 
   const handleShortcutClick = (actionName: string) => {
-    toast.success(`${actionName} module will be connected in Phase 5 (Manufacturing)!`);
+    toast.success(`${actionName} module will be connected in subsequent phases!`);
   };
 
   const kpis = [
-    { title: "Today's Production", value: `${metrics.productionToday} Cases` },
-    { title: "Today's Manufacturing Cost", value: `₹${metrics.manufacturingCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-    { title: "Raw Material Consumption", value: `${metrics.rawMaterialConsumption} Tons` },
-    { title: "Finished Goods Produced", value: `${metrics.finishedGoodsProduced} Packs` },
-    { title: "Today's Manufacturing Expenses", value: `₹${metrics.productionExpenses.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-    { title: "Current Raw Material Stock", value: `${metrics.currentRawMaterialStock} Tons` },
-    { title: "Current Finished Goods Stock", value: `${metrics.currentFinishedGoodsStock} Cases` },
+    { title: "Today's Production", value: `${metrics.productionToday} Cases`, subtitle: "Active completed batches output" },
+    { title: "Today's Manufacturing Cost", value: `₹${metrics.manufacturingCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, subtitle: "Raw material + direct expenses" },
+    { title: "Raw Material Consumption", value: `${metrics.rawMaterialConsumption} Tons`, subtitle: "Processed inputs today" },
+    { title: "Finished Goods Produced", value: `${metrics.finishedGoodsProduced} Packs`, subtitle: "Completed packs output" },
+    { title: "Today's Manufacturing Expenses", value: `₹${metrics.productionExpenses.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, subtitle: "Direct indirect/row costs" },
+    { title: "Current Raw Material Stock", value: `${metrics.currentRawMaterialStock} Tons`, subtitle: "Warehouse stock level log" },
+    { title: "Current Finished Goods Stock", value: `${metrics.currentFinishedGoodsStock} Cases`, subtitle: "Shippable storage levels" },
+    { title: "Total BOM Recipes", value: `${metrics.totalRecipes} Recipes`, subtitle: "Logged structural recipes" },
+    { title: "Active BOM Recipes", value: `${metrics.activeRecipes} Active`, subtitle: "Available for planning" },
+    { title: "Finished Goods Covered", value: `${metrics.finishedProductsCovered} Products`, subtitle: "Unique finished goods covered" },
   ];
 
   const quickActions = [
     { label: "Start Production", icon: Factory, color: "bg-emerald-600 text-white", click: () => handleShortcutClick("Start Production Batch") },
     { label: "Add Factory Expense", icon: TrendingDown, color: "bg-emerald-600 text-white", click: () => handleShortcutClick("Factory Expense Logs") },
-    { label: "Create BOM Recipe", icon: Layers, color: "bg-emerald-600 text-white", click: () => handleShortcutClick("BOM Recipe Sheet") },
+    { label: "Create BOM Recipe", icon: Layers, color: "bg-emerald-600 text-white", click: () => router.push("/manufacturing/bom?new=true") },
   ];
 
   const navigationShortcuts = [
-    { label: "Bill of Materials", href: "/manufacturing/bom", desc: "Manage cup & tissue structural recipes", icon: Layers, click: () => handleShortcutClick("BOM Recipes") },
-    { label: "Raw Materials", href: "/master-data/products", desc: "Browse rolls, chemicals & packaging catalogs", icon: Sparkles },
-    { label: "Finished Goods", href: "/master-data/products", desc: "Browse finished cup & tissue stock catalogs", icon: Factory },
+    { label: "Bill of Materials", href: "/manufacturing/bom", desc: "Manage cup & tissue structural recipes", icon: Layers },
+    { label: "Raw Materials", href: "/master-data/products?type=RAW_MATERIAL", desc: "Browse rolls, chemicals & packaging catalogs", icon: Sparkles },
+    { label: "Finished Goods", href: "/master-data/products?type=FINISHED_GOOD", desc: "Browse finished cup & tissue stock catalogs", icon: Factory },
     { label: "Production Runs", href: "/manufacturing/batches", desc: "View logged raw material batch runs", icon: Wrench, click: () => handleShortcutClick("Production Batches") },
     { label: "Reports", href: "/manufacturing/reports", desc: "Yield analysis & factory cost reports", icon: Layers, click: () => handleShortcutClick("Manufacturing Reports") },
   ];
@@ -98,9 +107,9 @@ export default function ManufacturingDashboardPage() {
             key={kpi.title}
             className="border-l-4 border-l-emerald-200 dark:border-l-emerald-900"
             title={kpi.title}
-            subtitle="No data available yet"
+            subtitle={kpi.subtitle}
           >
-            <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-400 dark:text-slate-600 block mt-1">
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-805 dark:text-slate-105 block mt-1">
               {kpi.value}
             </span>
           </Card>
@@ -130,21 +139,30 @@ export default function ManufacturingDashboardPage() {
           </div>
         </Card>
 
-        {/* Notice Info Card */}
-        <Card title="Manufacturing Roadmap" subtitle="Factory Integration Logs">
-          <div className="flex flex-col gap-3 mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
-            <div className="flex gap-2.5 items-start">
-              <Info className="w-5.5 h-5.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-              <span>
-                These analytics will reflect automatically as soon as the **BOM Recipes** and **Production Run** modules are built.
-              </span>
-            </div>
-            <div className="mt-1 flex flex-col gap-1.5">
-              <span className="font-bold text-slate-900 dark:text-slate-50">Included Modules:</span>
-              <span className="pl-3.5">• Bill of Materials (BOM)</span>
-              <span className="pl-3.5">• Batch Raw Material Shrinkage</span>
-              <span className="pl-3.5">• Finished Goods Yield Analysis</span>
-            </div>
+        {/* Recent BOM Recipes Card */}
+        <Card title="Recent BOM Recipes" subtitle="Top 5 recently updated recipes">
+          <div className="flex flex-col gap-2.5 mt-1.5 text-xs">
+            {metrics.recentlyUpdatedRecipes && metrics.recentlyUpdatedRecipes.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {metrics.recentlyUpdatedRecipes.map((r: any) => (
+                  <Link key={r.id} href={`/manufacturing/bom/${r.id}`}>
+                    <div className="flex justify-between items-center p-2 rounded-xl border border-slate-100 hover:border-slate-300 dark:border-slate-850 dark:hover:border-slate-800 bg-white dark:bg-slate-900 transition-all cursor-pointer">
+                      <div className="flex flex-col min-w-0 pl-1">
+                        <span className="font-bold text-slate-905 dark:text-white truncate">{r.name}</span>
+                        <span className="text-[10px] text-slate-400 mt-0.5">{r.finishedProductName} • {r.itemCount} items</span>
+                      </div>
+                      <span className="font-extrabold text-[10px] text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-1 rounded-lg">
+                        {r.wasteFactorPercent.toFixed(1)}%
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-slate-400 font-semibold">
+                No BOM Recipes created yet.
+              </div>
+            )}
           </div>
         </Card>
       </div>

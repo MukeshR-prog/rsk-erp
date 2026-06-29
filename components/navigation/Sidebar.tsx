@@ -87,6 +87,7 @@ export default function Sidebar() {
     { label: "Manufacturing Dashboard", href: "/manufacturing", icon: LayoutDashboard },
     { label: "Raw Materials", href: "/master-data/products?type=RAW_MATERIAL", icon: Sparkles },
     { label: "Finished Goods", href: "/master-data/products?type=FINISHED_GOOD", icon: Factory },
+    { label: "BOM Recipes", href: "/manufacturing/bom", icon: Layers },
   ];
 
   const masterDataItems = [

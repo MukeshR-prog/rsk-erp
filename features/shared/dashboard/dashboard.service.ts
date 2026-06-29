@@ -375,6 +375,44 @@ export const DashboardService = {
     });
     let currentFinishedGoodsStock = fgProducts.reduce((sum, p) => sum + Number(p.currentStock || 0), 0);
 
+    // 8. BOM Recipes Metrics
+    const totalRecipes = await prisma.bOMRecipe.count();
+    const activeRecipes = await prisma.bOMRecipe.count({
+      where: { isActive: true },
+    });
+
+    const distinctFinished = await prisma.bOMRecipe.findMany({
+      where: { isActive: true },
+      select: { finishedProductId: true },
+      distinct: ["finishedProductId"],
+    });
+    const finishedProductsCovered = distinctFinished.length;
+
+    const recentlyUpdated = await prisma.bOMRecipe.findMany({
+      take: 5,
+      orderBy: { updatedAt: "desc" },
+      include: {
+        finishedProduct: {
+          select: {
+            name: true,
+          },
+        },
+        items: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+    const recentlyUpdatedRecipes = recentlyUpdated.map((r) => ({
+      id: r.id,
+      name: r.name,
+      finishedProductName: r.finishedProduct.name,
+      itemCount: r.items.length,
+      wasteFactorPercent: Number(r.wasteFactorPercent),
+      updatedAt: r.updatedAt.toISOString(),
+    }));
+
     return {
       productionToday,
       rawMaterialConsumption,
@@ -383,6 +421,10 @@ export const DashboardService = {
       productionExpenses,
       currentRawMaterialStock,
       currentFinishedGoodsStock,
+      totalRecipes,
+      activeRecipes,
+      finishedProductsCovered,
+      recentlyUpdatedRecipes,
     };
   },
 
