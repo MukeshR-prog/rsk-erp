@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, use } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -28,8 +28,8 @@ import {
   toggleProductStatus,
   getProductCategoriesList,
   getUnitsList,
-} from "@/features/products/actions";
-import { productSchema, ProductFormValues } from "@/features/products/validations";
+} from "@/features/master-data/products/actions";
+import { productSchema, ProductFormValues } from "@/features/master-data/products/validations";
 import CategorySelector from "@/components/ui/CategorySelector";
 import UnitSelector from "@/components/ui/UnitSelector";
 import { PriceInput } from "@/components/ui/form/PriceInput";
@@ -60,8 +60,15 @@ interface DropdownOption {
   name: string;
 }
 
-export default function ProductsPage() {
+interface ProductsPageProps {
+  searchParams: Promise<{ type?: string }>;
+}
+
+export default function ProductsPage({ searchParams }: ProductsPageProps) {
   const router = useRouter();
+  const resolvedParams = use(searchParams);
+  const typeParam = resolvedParams.type;
+
   const [products, setProducts] = useState<ProductData[]>([]);
   const [categories, setCategories] = useState<DropdownOption[]>([]);
   const [units, setUnits] = useState<DropdownOption[]>([]);
@@ -72,6 +79,14 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [activeTab, setActiveTab] = useState<ProductData["type"] | "ALL">("ALL");
+
+  useEffect(() => {
+    if (typeParam === "RAW_MATERIAL" || typeParam === "FINISHED_GOOD" || typeParam === "TRADING_PRODUCT") {
+      setActiveTab(typeParam);
+    } else {
+      setActiveTab("ALL");
+    }
+  }, [typeParam]);
 
   const [isPending, startTransition] = useTransition();
 

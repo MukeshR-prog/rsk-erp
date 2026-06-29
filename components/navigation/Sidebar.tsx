@@ -76,31 +76,18 @@ export default function Sidebar() {
   // Define Navigation Items based on Workspace
   const tradingItems = [
     { label: "Trading Dashboard", href: "/trading", icon: LayoutDashboard },
-    { label: "Customers", href: "/master-data/contacts", icon: Users },
-    { label: "Suppliers", href: "/master-data/contacts", icon: Users },
-    { label: "Purchases", href: "/trading/purchases", icon: ShoppingCart, click: () => handleDevClick("Purchases") },
-    { label: "Purchase Returns", href: "/trading/purchasereturns", icon: ShoppingCart, click: () => handleDevClick("Purchase Returns") },
-    { label: "Sales", href: "/trading/sales", icon: TrendingUp, click: () => handleDevClick("Sales") },
-    { label: "Sales Returns", href: "/trading/salesreturns", icon: TrendingUp, click: () => handleDevClick("Sales Returns") },
-    { label: "Payments", href: "/trading/payments", icon: Receipt, click: () => handleDevClick("Payments") },
-    { label: "Inventory", href: "/trading/inventory", icon: Package, click: () => handleDevClick("Trading Inventory") },
-    { label: "Cash Book", href: "/trading/cashbook", icon: BookOpen, click: () => handleDevClick("Cash Book") },
-    { label: "Reports", href: "/trading/reports", icon: BarChart3, click: () => handleDevClick("Trading Reports") },
+    { label: "Customers", href: "/master-data/contacts?type=CUSTOMER", icon: Users },
+    { label: "Suppliers", href: "/master-data/contacts?type=SUPPLIER", icon: Users },
+    { label: "Purchases", href: "/trading/purchases", icon: ShoppingCart },
   ];
 
   const manufacturingItems = [
     { label: "Manufacturing Dashboard", href: "/manufacturing", icon: LayoutDashboard },
-    { label: "BOM Recipes", href: "/manufacturing/bom", icon: Layers, click: () => handleDevClick("Bill of Materials") },
-    { label: "Raw Materials", href: "/master-data/products", icon: Sparkles },
-    { label: "Finished Goods", href: "/master-data/products", icon: Factory },
-    { label: "Production Batch", href: "/manufacturing/batches", icon: WrenchIcon, click: () => handleDevClick("Production Batch") },
-    { label: "Production Expenses", href: "/manufacturing/expenses", icon: TrendingDown, click: () => handleDevClick("Production Expenses") },
-    { label: "Manufacturing Reports", href: "/manufacturing/reports", icon: BarChart3, click: () => handleDevClick("Manufacturing Reports") },
+    { label: "Raw Materials", href: "/master-data/products?type=RAW_MATERIAL", icon: Sparkles },
+    { label: "Finished Goods", href: "/master-data/products?type=FINISHED_GOOD", icon: Factory },
   ];
 
   const masterDataItems = [
-    { label: "Contacts", href: "/master-data/contacts", icon: Users },
-    { label: "Products", href: "/master-data/products", icon: Package },
     { label: "Product Categories", href: "/master-data/product-categories", icon: FolderOpen },
     { label: "Units of Measure", href: "/master-data/units", icon: Ruler },
     { label: "Expense Categories", href: "/master-data/expense-categories", icon: Receipt },
@@ -139,21 +126,6 @@ export default function Sidebar() {
               <span className="truncate">{item.label}</span>
             </div>
           );
-
-          if (item.click) {
-            return (
-              <button
-                key={item.label}
-                onClick={() => {
-                  closeSidebar();
-                  if (item.click) item.click();
-                }}
-                className="w-full text-left"
-              >
-                {content}
-              </button>
-            );
-          }
 
           return (
             <Link key={item.href} href={item.href} onClick={closeSidebar}>

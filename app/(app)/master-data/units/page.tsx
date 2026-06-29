@@ -19,8 +19,8 @@ import {
 } from "@heroui/react";
 import { Search, Plus, Edit, Trash2, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
-import { getUnits, upsertUnit, toggleUnitStatus } from "@/features/units/actions";
-import { unitSchema, UnitFormValues } from "@/features/units/validations";
+import { getUnits, upsertUnit, toggleUnitStatus } from "@/features/master-data/units/actions";
+import { unitSchema, UnitFormValues } from "@/features/master-data/units/validations";
 
 interface UnitData {
   id: string;

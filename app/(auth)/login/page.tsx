@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent, TextField, Label, Input, FieldError, Button } from "@heroui/react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import { loginSchema, LoginFormValues } from "@/features/auth/validations";
+import { loginSchema, LoginFormValues } from "@/features/shared/auth/validations";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {

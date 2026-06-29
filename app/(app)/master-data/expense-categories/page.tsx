@@ -23,8 +23,8 @@ import {
   getExpenseCategories,
   upsertExpenseCategory,
   toggleExpenseCategoryStatus,
-} from "@/features/expenses/actions";
-import { expenseCategorySchema, ExpenseCategoryFormValues } from "@/features/expenses/validations";
+} from "@/features/master-data/categories/expense/actions";
+import { expenseCategorySchema, ExpenseCategoryFormValues } from "@/features/master-data/categories/expense/validations";
 
 interface ExpenseCategoryData {
   id: string;

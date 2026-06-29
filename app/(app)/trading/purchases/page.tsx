@@ -48,8 +48,8 @@ import {
   getSuppliersList,
   getProductsList,
   createPurchase
-} from "@/features/purchases/actions";
-import { purchaseSchema, PurchaseFormValues } from "@/features/purchases/validations";
+} from "@/features/trading/purchases/actions";
+import { purchaseSchema, PurchaseFormValues } from "@/features/trading/purchases/validations";
 import { PurchaseStatus, PurchasePaymentStatus } from "@prisma/client";
 
 interface PurchaseItemField {

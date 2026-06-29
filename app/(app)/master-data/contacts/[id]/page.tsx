@@ -19,8 +19,8 @@ import {
 } from "@heroui/react";
 import { Edit, Trash2, CheckCircle, FileText, Info } from "lucide-react";
 import toast from "react-hot-toast";
-import { getContactDetails, upsertContact, toggleContactStatus } from "@/features/contacts/actions";
-import { contactSchema, ContactFormValues } from "@/features/contacts/validations";
+import { getContactDetails, upsertContact, toggleContactStatus } from "@/features/master-data/contacts/actions";
+import { contactSchema, ContactFormValues } from "@/features/master-data/contacts/validations";
 import { PhoneInput } from "@/components/ui/form/PhoneInput";
 import { GSTInput } from "@/components/ui/form/GSTInput";
 import { CurrencyInput } from "@/components/ui/form/CurrencyInput";

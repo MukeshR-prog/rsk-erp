@@ -30,14 +30,13 @@ model Contact {
   state              String?
   pincode            String?
   openingBalance     Decimal     @default(0.0) @db.Decimal(12, 2)
-  outstandingBalance Decimal     @default(0.0) @db.Decimal(12, 2)
   notes              String?
   isActive           Boolean     @default(true)
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
-  invoices           Invoice[]
   payments           Payment[]
   purchases          Purchase[]
+  sales              Sale[]
 
   @@index([type])
 }
@@ -63,7 +62,7 @@ model Product {
   unitId            String?
   bomItems          BOMItem[]
   bomRecipes        BOMRecipe[]
-  invoiceItems      InvoiceItem[]
+  saleItems         SaleItem[]
   category          ProductCategory?     @relation(fields: [categoryId], references: [id])
   unit              Unit?                @relation(fields: [unitId], references: [id])
   productionBatches ProductionBatch[]
@@ -143,58 +142,64 @@ model StockMovement {
   @@index([productId, createdAt])
 }
 
-model Invoice {
-  id            String        @id @default(uuid())
-  invoiceNumber String        @unique
-  type          InvoiceType
-  contactId     String
-  invoiceDate   DateTime      @default(now())
-  dueDate       DateTime?
-  totalAmount   Decimal       @db.Decimal(12, 2)
-  paidAmount    Decimal       @default(0.0) @db.Decimal(12, 2)
-  paymentStatus PaymentStatus @default(UNPAID)
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  contact       Contact       @relation(fields: [contactId], references: [id])
-  items         InvoiceItem[]
-  payments      Payment[]
+model Sale {
+  id               String            @id @default(uuid())
+  saleNumber       String            @unique
+  customerId       String
+  saleDate         DateTime          @default(now())
+  reference        String?
+  notes            String?
+  discount         Decimal           @default(0.0) @db.Decimal(12, 2)
+  transportCharges Decimal           @default(0.0) @db.Decimal(12, 2)
+  subtotal         Decimal           @db.Decimal(12, 2)
+  grandTotal       Decimal           @db.Decimal(12, 2)
+  status           SaleStatus        @default(COMPLETED)
+  paymentStatus    SalePaymentStatus @default(UNPAID)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  customer         Contact           @relation(fields: [customerId], references: [id])
+  items            SaleItem[]
+  payments         Payment[]
 
-  @@index([contactId])
-  @@index([invoiceNumber])
-  @@index([type])
+  @@index([customerId])
+  @@index([saleNumber])
 }
 
-model InvoiceItem {
-  id         String   @id @default(uuid())
-  invoiceId  String
-  productId  String
-  quantity   Decimal  @db.Decimal(12, 2)
-  unitPrice  Decimal  @db.Decimal(12, 2)
-  totalPrice Decimal  @db.Decimal(12, 2)
-  costPrice  Decimal? @db.Decimal(12, 2)
-  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  product    Product  @relation(fields: [productId], references: [id])
+model SaleItem {
+  id          String   @id @default(uuid())
+  saleId      String
+  productId   String
+  quantity    Decimal  @db.Decimal(12, 2)
+  sellingRate Decimal  @db.Decimal(12, 2)
+  discount    Decimal  @default(0.0) @db.Decimal(12, 2)
+  lineTotal   Decimal  @db.Decimal(12, 2)
+  remarks     String?
+  product     Product  @relation(fields: [productId], references: [id])
+  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
-  @@index([invoiceId])
+  @@index([saleId])
   @@index([productId])
 }
 
 model Payment {
   id              String        @id @default(uuid())
   contactId       String
-  invoiceId       String?
+  paymentType     PaymentType
   amount          Decimal       @db.Decimal(12, 2)
   paymentDate     DateTime      @default(now())
   paymentMethod   PaymentMethod
   referenceNumber String?
+  purchaseId      String?
+  saleId          String?
   notes           String?
   createdAt       DateTime      @default(now())
   contact         Contact       @relation(fields: [contactId], references: [id])
-  invoice         Invoice?      @relation(fields: [invoiceId], references: [id])
+  purchase        Purchase?     @relation(fields: [purchaseId], references: [id])
+  sale            Sale?         @relation(fields: [saleId], references: [id])
 
   @@index([contactId])
-  @@index([invoiceId])
+  @@index([purchaseId])
+  @@index([saleId])
 }
 
 model ProductionBatch {
@@ -257,6 +262,7 @@ model Purchase {
   updatedAt             DateTime              @updatedAt
   supplier              Contact               @relation(fields: [supplierId], references: [id])
   items                 PurchaseItem[]
+  payments              Payment[]
 
   @@index([supplierId])
   @@index([purchaseNumber])
@@ -300,15 +306,21 @@ enum MovementType {
   ADJUSTMENT
 }
 
-enum InvoiceType {
-  SALES
-  PURCHASE
+enum SaleStatus {
+  DRAFT
+  COMPLETED
+  CANCELLED
 }
 
-enum PaymentStatus {
+enum SalePaymentStatus {
   UNPAID
   PARTIALLY_PAID
   PAID
+}
+
+enum PaymentType {
+  CUSTOMER_RECEIPT
+  SUPPLIER_PAYMENT
 }
 
 enum PaymentMethod {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, use } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -22,8 +22,8 @@ import {
 } from "@heroui/react";
 import { Search, Plus, Edit, Trash2, CheckCircle, User, Phone, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
-import { getContacts, upsertContact, toggleContactStatus } from "@/features/contacts/actions";
-import { contactSchema, ContactFormValues } from "@/features/contacts/validations";
+import { getContacts, upsertContact, toggleContactStatus } from "@/features/master-data/contacts/actions";
+import { contactSchema, ContactFormValues } from "@/features/master-data/contacts/validations";
 import { PhoneInput } from "@/components/ui/form/PhoneInput";
 import { GSTInput } from "@/components/ui/form/GSTInput";
 import { CurrencyInput } from "@/components/ui/form/CurrencyInput";
@@ -47,8 +47,15 @@ interface ContactData {
   isActive: boolean;
 }
 
-export default function ContactsPage() {
+interface ContactsPageProps {
+  searchParams: Promise<{ type?: string }>;
+}
+
+export default function ContactsPage({ searchParams }: ContactsPageProps) {
   const router = useRouter();
+  const resolvedParams = use(searchParams);
+  const typeParam = resolvedParams.type;
+
   const [contacts, setContacts] = useState<ContactData[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -57,6 +64,14 @@ export default function ContactsPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [activeTab, setActiveTab] = useState<"ALL" | "CUSTOMER" | "SUPPLIER">("ALL");
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (typeParam === "CUSTOMER" || typeParam === "SUPPLIER") {
+      setActiveTab(typeParam);
+    } else {
+      setActiveTab("ALL");
+    }
+  }, [typeParam]);
 
   // Form State
   const [isFormOpen, setIsFormOpen] = useState(false);

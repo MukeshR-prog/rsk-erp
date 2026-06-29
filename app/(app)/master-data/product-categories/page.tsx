@@ -23,8 +23,8 @@ import {
   getProductCategories,
   upsertProductCategory,
   toggleProductCategoryStatus,
-} from "@/features/categories/actions";
-import { productCategorySchema, ProductCategoryFormValues } from "@/features/categories/validations";
+} from "@/features/master-data/categories/product/actions";
+import { productCategorySchema, ProductCategoryFormValues } from "@/features/master-data/categories/product/validations";
 
 interface CategoryData {
   id: string;

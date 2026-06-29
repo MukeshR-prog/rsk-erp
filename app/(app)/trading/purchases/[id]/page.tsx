@@ -24,7 +24,7 @@ import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
-import { getPurchaseDetails, cancelPurchase } from "@/features/purchases/actions";
+import { getPurchaseDetails, cancelPurchase } from "@/features/trading/purchases/actions";
 
 interface PageProps {
   params: Promise<{ id: string }>;

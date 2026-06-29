@@ -25,8 +25,8 @@ import {
   toggleProductStatus,
   getProductCategoriesList,
   getUnitsList,
-} from "@/features/products/actions";
-import { productSchema, ProductFormValues } from "@/features/products/validations";
+} from "@/features/master-data/products/actions";
+import { productSchema, ProductFormValues } from "@/features/master-data/products/validations";
 import CategorySelector from "@/components/ui/CategorySelector";
 import UnitSelector from "@/components/ui/UnitSelector";
 import { PriceInput } from "@/components/ui/form/PriceInput";

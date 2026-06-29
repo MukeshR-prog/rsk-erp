@@ -20,16 +20,12 @@ export default function BottomNav() {
 
   const tradingItems = [
     { label: "Home", href: "/trading", icon: LayoutDashboard },
-    { label: "Sales", href: "/trading/sales", icon: TrendingUp, isDev: true },
-    { label: "Purchases", href: "/trading/purchases", icon: ShoppingCart, isDev: true },
-    { label: "Stock", href: "/trading/inventory", icon: Package, isDev: true },
+    { label: "Purchases", href: "/trading/purchases", icon: ShoppingCart },
   ];
 
   const manufacturingItems = [
     { label: "Home", href: "/manufacturing", icon: LayoutDashboard },
-    { label: "BOM", href: "/manufacturing/bom", icon: Layers, isDev: true },
-    { label: "Produce", href: "/manufacturing/batches", icon: Factory, isDev: true },
-    { label: "Catalog", href: "/master-data/products", icon: Package },
+    { label: "Raw Materials", href: "/master-data/products?type=RAW_MATERIAL", icon: Package },
   ];
 
   const items = activeWorkspace === "manufacturing" ? manufacturingItems : tradingItems;
@@ -56,18 +52,6 @@ export default function BottomNav() {
             <span className="text-[10px] tracking-wide">{item.label}</span>
           </div>
         );
-
-        if (item.isDev) {
-          return (
-            <button
-              key={item.label}
-              onClick={() => handleDevClick(item.label)}
-              className="focus:outline-none"
-            >
-              {content}
-            </button>
-          );
-        }
 
         return (
           <Link key={item.href} href={item.href}>
