@@ -1,6 +1,6 @@
 import { Prisma, PrismaClient, SaleStatus, SalePaymentStatus } from "@prisma/client";
 import { InventoryService } from "@/features/inventory/inventory.service";
-import { SaleNumberService } from "./saleNumber.service";
+import { NumberGeneratorService } from "@/features/shared/services/numberGenerator.service";
 import { CreateSaleDTO, EditSaleDTO } from "./validations";
 
 export const SaleService = {
@@ -125,7 +125,7 @@ export const SaleService = {
     }
 
     // 3. Generate sequential invoice code
-    const saleNumber = await SaleNumberService.generateNextSaleNumber(tx);
+    const saleNumber = await NumberGeneratorService.generateNumber("SAL", tx);
 
     // 4. Calculate subtotal & grandTotal
     const { subtotal, grandTotal, lineTotals } = this.calculateSaleTotals(

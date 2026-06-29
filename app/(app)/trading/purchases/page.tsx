@@ -44,11 +44,11 @@ import { QuantityInput } from "@/components/ui/form/QuantityInput";
 
 import {
   getPurchases,
-  getPurchaseDashboardMetrics,
   getSuppliersList,
   getProductsList,
   createPurchase
 } from "@/features/trading/purchases/actions";
+import { getPurchaseDashboardMetricsAction } from "@/features/shared/dashboard/actions";
 import { purchaseSchema, PurchaseFormValues } from "@/features/trading/purchases/validations";
 import { PurchaseStatus, PurchasePaymentStatus } from "@prisma/client";
 
@@ -127,7 +127,7 @@ export default function PurchasesPage() {
           paymentStatus: paymentFilter ? (paymentFilter as PurchasePaymentStatus) : undefined,
           page,
         }),
-        getPurchaseDashboardMetrics(),
+        getPurchaseDashboardMetricsAction(),
         getSuppliersList(),
         getProductsList(),
       ]);

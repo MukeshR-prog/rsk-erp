@@ -6,7 +6,6 @@ import { PaymentFilters, CreateSupplierPaymentDTO } from "./types";
 import { createPaymentSchema, cancelPaymentSchema, createReceiptSchema, CreateReceiptFormValues } from "./validations";
 import { PaymentService } from "./payment.service";
 import { LedgerService } from "./ledger.service";
-import { DashboardService } from "@/features/shared/dashboard/dashboard.service";
 import { createServerClient } from "@/lib/supabase/server";
 import { Prisma } from "@prisma/client";
 
@@ -682,21 +681,3 @@ export async function getCustomersForPayments() {
   }
 }
 
-/**
- * Fetch complete data for the main Trading Dashboard.
- */
-export async function getTradingDashboardData() {
-  try {
-    const metricsData = await DashboardService.getTradingMetrics();
-    return {
-      success: true,
-      data: metricsData,
-    };
-  } catch (error: any) {
-    console.error("getTradingDashboardData failed:", error);
-    return {
-      success: false,
-      error: error.message || "Failed to retrieve dashboard metrics.",
-    };
-  }
-}

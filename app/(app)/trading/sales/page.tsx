@@ -27,7 +27,7 @@ import {
   getProductsAction,
   createSaleAction,
 } from "@/features/trading/sales/actions";
-import { getTradingDashboardData } from "@/features/trading/payments/actions";
+import { getTradingDashboardAction } from "@/features/shared/dashboard/actions";
 import { SaleStatus, SalePaymentStatus } from "@prisma/client";
 
 export default function SalesPage() {
@@ -62,7 +62,7 @@ export default function SalesPage() {
           paymentStatus: paymentFilter ? (paymentFilter as SalePaymentStatus) : undefined,
           page,
         }),
-        getTradingDashboardData(),
+        getTradingDashboardAction(),
         getCustomersAction(),
         getProductsAction(),
       ]);

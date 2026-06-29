@@ -22,7 +22,7 @@ import {
 import toast from "react-hot-toast";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import Link from "next/link";
-import { getTradingDashboardData } from "@/features/trading/payments/actions";
+import { getTradingDashboardAction } from "@/features/shared/dashboard/actions";
 import dayjs from "dayjs";
 
 export default function TradingDashboardPage() {
@@ -39,7 +39,7 @@ export default function TradingDashboardPage() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const res = await getTradingDashboardData();
+      const res = await getTradingDashboardAction();
       if (res.success && res.data) {
         setData(res.data);
       } else {

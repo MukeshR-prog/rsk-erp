@@ -44,3 +44,5 @@ export const purchaseSchema = z.object({
 
 export type PurchaseFormValues = z.infer<typeof purchaseSchema>;
 export type PurchaseItemFormValues = z.infer<typeof purchaseItemSchema>;
+export type CreatePurchaseDTO = PurchaseFormValues;
+export type EditPurchaseDTO = PurchaseFormValues;

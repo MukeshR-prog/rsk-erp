@@ -385,4 +385,48 @@ export const DashboardService = {
       currentFinishedGoodsStock,
     };
   },
+
+  /**
+   * Calculates metrics for the Purchases module.
+   */
+  async getPurchaseMetrics() {
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+    const [allCompleted, todayCompleted, pendingPayments] = await Promise.all([
+      // 1. Total Purchases
+      prisma.purchase.aggregate({
+        where: { status: "COMPLETED" },
+        _sum: { grandTotal: true },
+      }),
+      // 2. Today's Purchases
+      prisma.purchase.aggregate({
+        where: {
+          status: "COMPLETED",
+          purchaseDate: {
+            gte: startOfToday,
+            lte: endOfToday,
+          },
+        },
+        _sum: { grandTotal: true },
+      }),
+      // 3. Pending Payments
+      prisma.purchase.aggregate({
+        where: {
+          status: "COMPLETED",
+          paymentStatus: {
+            in: ["UNPAID", "PARTIALLY_PAID"],
+          },
+        },
+        _sum: { grandTotal: true },
+      }),
+    ]);
+
+    return {
+      totalPurchases: Number(allCompleted._sum.grandTotal || 0),
+      todayPurchases: Number(todayCompleted._sum.grandTotal || 0),
+      pendingPayments: Number(pendingPayments._sum.grandTotal || 0),
+    };
+  },
 };
