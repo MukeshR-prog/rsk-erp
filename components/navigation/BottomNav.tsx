@@ -21,6 +21,7 @@ export default function BottomNav() {
   const tradingItems = [
     { label: "Home", href: "/trading", icon: LayoutDashboard },
     { label: "Purchases", href: "/trading/purchases", icon: ShoppingCart },
+    { label: "Sales", href: "/trading/sales", icon: TrendingUp },
   ];
 
   const manufacturingItems = [

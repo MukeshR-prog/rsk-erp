@@ -31,6 +31,7 @@ model Contact {
   pincode            String?
   openingBalance     Decimal     @default(0.0) @db.Decimal(12, 2)
   notes              String?
+  creditLimit        Decimal?    @db.Decimal(12, 2)
   isActive           Boolean     @default(true)
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
@@ -55,6 +56,8 @@ model Product {
   purchasePrice     Decimal?             @db.Decimal(12, 2)
   sellingPrice      Decimal?             @db.Decimal(12, 2)
   minStockAlert     Decimal?             @db.Decimal(12, 2)
+  hsnCode           String?
+  gstRate           Decimal?             @db.Decimal(5, 2)
   isActive          Boolean              @default(true)
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
@@ -98,8 +101,9 @@ model ExpenseCategory {
   id        String   @id @default(uuid())
   name      String   @unique
   isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  productionExpenses ProductionExpense[]
 }
 
 model BOMRecipe {
@@ -193,6 +197,7 @@ model Payment {
   notes              String?
   status             PaymentStatus @default(COMPLETED)
   cancellationReason String?
+  isAdvance          Boolean       @default(false)
   createdById        String?
   updatedById        String?
   purchaseId         String?
@@ -215,13 +220,6 @@ model ProductionBatch {
   productId         String
   quantityProduced  Decimal              @db.Decimal(12, 2)
   batchDate         DateTime             @default(now())
-  fuelCost          Decimal              @default(0.0) @db.Decimal(12, 2)
-  labourCost        Decimal              @default(0.0) @db.Decimal(12, 2)
-  packingCost       Decimal              @default(0.0) @db.Decimal(12, 2)
-  transportCost     Decimal              @default(0.0) @db.Decimal(12, 2)
-  electricityCost   Decimal              @default(0.0) @db.Decimal(12, 2)
-  maintenanceCost   Decimal              @default(0.0) @db.Decimal(12, 2)
-  miscCost          Decimal              @default(0.0) @db.Decimal(12, 2)
   totalMaterialCost Decimal              @default(0.0) @db.Decimal(12, 2)
   totalBatchCost    Decimal              @default(0.0) @db.Decimal(12, 2)
   unitCost          Decimal              @default(0.0) @db.Decimal(12, 2)
@@ -231,10 +229,26 @@ model ProductionBatch {
   product           Product              @relation(fields: [productId], references: [id])
   recipe            BOMRecipe            @relation(fields: [recipeId], references: [id])
   materialsConsumed ProductionMaterial[]
+  expenses          ProductionExpense[]
 
   @@index([productId])
   @@index([recipeId])
   @@index([batchNumber])
+}
+
+model ProductionExpense {
+  id          String   @id @default(uuid())
+  batchId     String
+  categoryId  String
+  amount      Decimal  @db.Decimal(12, 2)
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  batch        ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  category     ExpenseCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([batchId])
+  @@index([categoryId])
 }
 
 model ProductionMaterial {
@@ -264,6 +278,7 @@ model Purchase {
   grandTotal            Decimal               @db.Decimal(12, 2)
   status                PurchaseStatus        @default(COMPLETED)
   paymentStatus         PurchasePaymentStatus @default(UNPAID)
+  receivedQuantity      Decimal?              @db.Decimal(12, 2)
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
   supplier              Contact               @relation(fields: [supplierId], references: [id])

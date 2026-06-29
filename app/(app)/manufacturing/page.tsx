@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import { Button } from "@heroui/react";
+import { getManufacturingDashboardAction } from "@/features/shared/dashboard/actions";
 import {
   Plus,
   Factory,
@@ -21,9 +22,27 @@ import Link from "next/link";
 export default function ManufacturingDashboardPage() {
   const { setWorkspace } = useWorkspaceStore();
 
-  // Ensure workspace store matches routing context
+  const [metrics, setMetrics] = useState({
+    productionToday: 0,
+    rawMaterialConsumption: 0,
+    finishedGoodsProduced: 0,
+    manufacturingCost: 0,
+    productionExpenses: 0,
+    currentRawMaterialStock: 0,
+    currentFinishedGoodsStock: 0,
+  });
+
+  // Ensure workspace store matches routing context and fetch metrics
   useEffect(() => {
     setWorkspace("manufacturing");
+
+    async function loadMetrics() {
+      const res = await getManufacturingDashboardAction();
+      if (res.success && res.data) {
+        setMetrics(res.data);
+      }
+    }
+    loadMetrics();
   }, [setWorkspace]);
 
   const handleShortcutClick = (actionName: string) => {
@@ -31,13 +50,13 @@ export default function ManufacturingDashboardPage() {
   };
 
   const kpis = [
-    { title: "Today's Production", value: "0 Cases" },
-    { title: "Today's Manufacturing Cost", value: "₹0.00" },
-    { title: "Raw Material Consumption", value: "0.00 Tons" },
-    { title: "Finished Goods Produced", value: "0 Packs" },
-    { title: "Today's Manufacturing Expenses", value: "₹0.00" },
-    { title: "Current Raw Material Stock", value: "0.00 Tons" },
-    { title: "Current Finished Goods Stock", value: "0 Cases" },
+    { title: "Today's Production", value: `${metrics.productionToday} Cases` },
+    { title: "Today's Manufacturing Cost", value: `₹${metrics.manufacturingCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
+    { title: "Raw Material Consumption", value: `${metrics.rawMaterialConsumption} Tons` },
+    { title: "Finished Goods Produced", value: `${metrics.finishedGoodsProduced} Packs` },
+    { title: "Today's Manufacturing Expenses", value: `₹${metrics.productionExpenses.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
+    { title: "Current Raw Material Stock", value: `${metrics.currentRawMaterialStock} Tons` },
+    { title: "Current Finished Goods Stock", value: `${metrics.currentFinishedGoodsStock} Cases` },
   ];
 
   const quickActions = [

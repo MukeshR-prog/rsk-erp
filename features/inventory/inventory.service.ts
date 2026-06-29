@@ -100,18 +100,24 @@ export const InventoryService = {
   },
 
   /**
-   * Reverses a stock adjustment by applying the opposite quantity change.
+   * Logs a stock movement audit trail entry.
    */
-  async reverseStock(
+  async recordMovement(
     tx: Prisma.TransactionClient,
     productId: string,
-    originalQuantityChange: number | Prisma.Decimal | any,
+    quantity: number | Prisma.Decimal | any,
     type: MovementType,
     referenceId?: string,
     notes?: string
   ) {
-    const original = new Prisma.Decimal(String(originalQuantityChange));
-    const reversedChange = original.negated();
-    return this.adjustStock(tx, productId, reversedChange, type, referenceId, notes);
+    return tx.stockMovement.create({
+      data: {
+        productId,
+        quantity: new Prisma.Decimal(String(quantity)),
+        type,
+        referenceId,
+        notes,
+      },
+    });
   },
 };

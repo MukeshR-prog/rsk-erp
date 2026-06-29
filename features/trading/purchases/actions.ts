@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { PurchaseFilters } from "./types";
 import { purchaseSchema, PurchaseFormValues } from "./validations";
 import { InventoryService } from "@/features/inventory/inventory.service";
-import { PurchaseNumberService } from "./purchaseNumber.service";
+import { NumberGeneratorService } from "@/features/shared/services/numberGenerator.service";
 import { Prisma, PurchaseStatus, PurchasePaymentStatus } from "@prisma/client";
 
 /**
@@ -318,7 +318,7 @@ export async function createPurchase(rawData: any) {
     // 3. Database transaction wrapper
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Create sequence number
-      const purchaseNumber = await PurchaseNumberService.generateNextPurchaseNumber(tx);
+      const purchaseNumber = await NumberGeneratorService.generateNumber("PUR", tx);
 
       // Create Purchase Invoice Header
       const purchase = await tx.purchase.create({
@@ -404,7 +404,7 @@ export async function cancelPurchase(id: string) {
       // Only reverse inventory and outstanding if it was COMPLETED (drafts haven't changed counts)
       if (originalStatus === "COMPLETED") {
         for (const item of purchase.items) {
-          await InventoryService.reverseStock(
+          await InventoryService.decreaseStock(
             tx,
             item.productId,
             item.quantity,

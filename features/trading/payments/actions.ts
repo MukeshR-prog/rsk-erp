@@ -3,9 +3,10 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { PaymentFilters, CreateSupplierPaymentDTO } from "./types";
-import { createPaymentSchema, cancelPaymentSchema } from "./validations";
+import { createPaymentSchema, cancelPaymentSchema, createReceiptSchema, CreateReceiptFormValues } from "./validations";
 import { PaymentService } from "./payment.service";
 import { LedgerService } from "./ledger.service";
+import { DashboardService } from "@/features/shared/dashboard/dashboard.service";
 import { createServerClient } from "@/lib/supabase/server";
 import { Prisma } from "@prisma/client";
 
@@ -211,8 +212,8 @@ export async function createSupplierPaymentAction(data: CreateSupplierPaymentDTO
     // Get current userId for auditing
     const userId = await getCurrentUserId();
 
-    const payment = await prisma.$transaction(async (tx) => {
-      return await PaymentService.createSupplierPayment(
+     const payment = await prisma.$transaction(async (tx) => {
+      return await PaymentService.createPayment(
         {
           contactId: validated.contactId,
           purchaseId: validated.purchaseId,
@@ -222,6 +223,7 @@ export async function createSupplierPaymentAction(data: CreateSupplierPaymentDTO
           referenceNumber: validated.referenceNumber,
           notes: validated.notes,
           createdById: userId || undefined,
+          paymentType: "SUPPLIER_PAYMENT",
         },
         tx
       );
@@ -250,6 +252,54 @@ export async function createSupplierPaymentAction(data: CreateSupplierPaymentDTO
 }
 
 /**
+ * Creates a new customer receipt transaction.
+ */
+export async function createCustomerReceiptAction(data: CreateReceiptFormValues) {
+  try {
+    const validated = createReceiptSchema.parse(data);
+    const userId = await getCurrentUserId();
+
+    const payment = await prisma.$transaction(async (tx) => {
+      return await PaymentService.createPayment(
+        {
+          contactId: validated.contactId,
+          saleId: validated.saleId,
+          amount: validated.amount,
+          paymentDate: new Date(validated.paymentDate),
+          paymentMethod: validated.paymentMethod,
+          referenceNumber: validated.referenceNumber,
+          notes: validated.notes,
+          createdById: userId || undefined,
+          paymentType: "CUSTOMER_RECEIPT",
+        },
+        tx
+      );
+    });
+
+    revalidatePath("/trading/payments");
+    if (data.saleId) {
+      revalidatePath(`/trading/sales/${data.saleId}`);
+    }
+    revalidatePath("/trading/sales");
+    revalidatePath("/trading");
+
+    return {
+      success: true,
+      data: {
+        id: payment.id,
+        paymentNumber: payment.paymentNumber,
+      },
+    };
+  } catch (error: any) {
+    console.error("createCustomerReceiptAction failed:", error);
+    if (error.name === "ZodError") {
+      return { success: false, error: error.errors[0].message };
+    }
+    return { success: false, error: error.message || "Failed to record receipt." };
+  }
+}
+
+/**
  * Cancels a completed supplier payment.
  */
 export async function cancelSupplierPaymentAction(paymentId: string, cancellationReason: string) {
@@ -261,7 +311,7 @@ export async function cancelSupplierPaymentAction(paymentId: string, cancellatio
     const userId = await getCurrentUserId();
 
     const payment = await prisma.$transaction(async (tx) => {
-      return await PaymentService.cancelSupplierPayment(
+      return await PaymentService.cancelPayment(
         validated.paymentId,
         validated.cancellationReason,
         userId || "system",
@@ -285,6 +335,41 @@ export async function cancelSupplierPaymentAction(paymentId: string, cancellatio
       return { success: false, error: error.errors[0].message };
     }
     return { success: false, error: error.message || "Failed to cancel payment." };
+  }
+}
+
+/**
+ * Cancels a completed customer receipt.
+ */
+export async function cancelCustomerReceiptAction(paymentId: string, cancellationReason: string) {
+  try {
+    const validated = cancelPaymentSchema.parse({ paymentId, cancellationReason });
+    const userId = await getCurrentUserId();
+
+    const payment = await prisma.$transaction(async (tx) => {
+      return await PaymentService.cancelPayment(
+        validated.paymentId,
+        validated.cancellationReason,
+        userId || "system",
+        tx
+      );
+    });
+
+    revalidatePath("/trading/payments");
+    revalidatePath(`/trading/payments/${paymentId}`);
+    if (payment.saleId) {
+      revalidatePath(`/trading/sales/${payment.saleId}`);
+    }
+    revalidatePath("/trading/sales");
+    revalidatePath("/trading");
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("cancelCustomerReceiptAction failed:", error);
+    if (error.name === "ZodError") {
+      return { success: false, error: error.errors[0].message };
+    }
+    return { success: false, error: error.message || "Failed to cancel receipt." };
   }
 }
 
@@ -453,157 +538,10 @@ export async function getSuppliersForPayments() {
  */
 export async function getTradingDashboardData() {
   try {
-    const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-
-    // 1. Today's Purchases
-    const todayPurchasesAgg = await prisma.purchase.aggregate({
-      where: {
-        status: "COMPLETED",
-        purchaseDate: {
-          gte: startOfToday,
-          lte: endOfToday,
-        },
-      },
-      _sum: {
-        grandTotal: true,
-      },
-    });
-    const todayPurchases = Number(todayPurchasesAgg._sum.grandTotal || 0);
-
-    // 2. Today's Supplier Payments
-    const todayPaymentsAgg = await prisma.payment.aggregate({
-      where: {
-        paymentType: "SUPPLIER_PAYMENT",
-        status: "COMPLETED",
-        paymentDate: {
-          gte: startOfToday,
-          lte: endOfToday,
-        },
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-    const todayPayments = Number(todayPaymentsAgg._sum.amount || 0);
-
-    // 3. Dynamic Supplier Outstanding (Sum of all suppliers)
-    const suppliers = await prisma.contact.findMany({
-      where: {
-        type: "SUPPLIER",
-        isActive: true,
-      },
-      select: { id: true },
-    });
-
-    let totalSupplierOutstanding = 0;
-    for (const s of suppliers) {
-      const bal = await LedgerService.getSupplierOutstanding(s.id, prisma);
-      totalSupplierOutstanding += bal;
-    }
-
-    // 4. Dynamic Customer Outstanding (Sum of all customers)
-    const customers = await prisma.contact.findMany({
-      where: {
-        type: "CUSTOMER",
-        isActive: true,
-      },
-      select: { id: true },
-    });
-
-    let totalCustomerOutstanding = 0;
-    for (const c of customers) {
-      const bal = await LedgerService.getCustomerOutstanding(c.id, prisma);
-      totalCustomerOutstanding += bal;
-    }
-
-    // 5. Current Stock Value (Sum of Product currentStock * averageCost)
-    const products = await prisma.product.findMany({
-      where: {
-        isActive: true,
-      },
-      select: {
-        currentStock: true,
-        averageCost: true,
-      },
-    });
-
-    let totalStockValue = 0;
-    products.forEach((p) => {
-      totalStockValue += Number(p.currentStock || 0) * Number(p.averageCost || 0);
-    });
-
-    // 6. Low Stock Count (Active products with currentStock <= 10)
-    const lowStockCount = await prisma.product.count({
-      where: {
-        isActive: true,
-        currentStock: {
-          lte: 10,
-        },
-      },
-    });
-
-    // 7. Recent Purchases (5 most recent completed purchases)
-    const recentPurchases = await prisma.purchase.findMany({
-      orderBy: {
-        purchaseDate: "desc",
-      },
-      take: 5,
-      include: {
-        supplier: {
-          select: { name: true },
-        },
-      },
-    });
-
-    // 8. Recent Payments (5 most recent completed payments)
-    const recentPayments = await prisma.payment.findMany({
-      where: {
-        paymentType: "SUPPLIER_PAYMENT",
-      },
-      orderBy: {
-        paymentDate: "desc",
-      },
-      take: 5,
-      include: {
-        contact: {
-          select: { name: true },
-        },
-      },
-    });
-
+    const metricsData = await DashboardService.getTradingMetrics();
     return {
       success: true,
-      data: {
-        metrics: {
-          todayPurchases,
-          todaySales: 0, // Placeholder
-          todayCollections: 0, // Placeholder
-          todayPayments,
-          customerOutstanding: totalCustomerOutstanding,
-          supplierOutstanding: totalSupplierOutstanding,
-          currentStockValue: totalStockValue,
-          lowStockCount,
-        },
-        recentPurchases: recentPurchases.map((p) => ({
-          id: p.id,
-          number: p.purchaseNumber,
-          date: p.purchaseDate,
-          supplierName: p.supplier.name,
-          grandTotal: Number(p.grandTotal),
-          status: p.status,
-          paymentStatus: p.paymentStatus,
-        })),
-        recentPayments: recentPayments.map((p) => ({
-          id: p.id,
-          number: p.paymentNumber,
-          date: p.paymentDate,
-          supplierName: p.contact.name,
-          amount: Number(p.amount),
-          status: p.status,
-        })),
-      },
+      data: metricsData,
     };
   } catch (error: any) {
     console.error("getTradingDashboardData failed:", error);

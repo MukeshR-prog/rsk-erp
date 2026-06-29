@@ -31,5 +31,29 @@ export const cancelPaymentSchema = z.object({
     .max(255, "Reason cannot exceed 255 characters."),
 });
 
+export const createReceiptSchema = z.object({
+  contactId: z.string().uuid("Please select a valid customer."),
+  saleId: z.string().uuid("Please select a valid sale invoice."),
+  amount: z
+    .number()
+    .positive("Receipt amount must be greater than zero.")
+    .max(99999999, "Amount is too large."),
+  paymentDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: "Please enter a valid receipt date.",
+  }),
+  paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "UPI", "CHEQUE"]),
+  referenceNumber: z
+    .string()
+    .max(50, "Reference number cannot exceed 50 characters.")
+    .optional()
+    .or(z.literal("")),
+  notes: z
+    .string()
+    .max(255, "Notes cannot exceed 255 characters.")
+    .optional()
+    .or(z.literal("")),
+});
+
 export type CreatePaymentFormValues = z.infer<typeof createPaymentSchema>;
 export type CancelPaymentFormValues = z.infer<typeof cancelPaymentSchema>;
+export type CreateReceiptFormValues = z.infer<typeof createReceiptSchema>;
