@@ -107,7 +107,7 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
 
   if (loading) {
     return (
-      <div className="flex h-[400px] items-center justify-center text-slate-500 font-medium">
+      <div className="flex h-100 items-center justify-center text-slate-500 font-medium">
         Loading transaction details...
       </div>
     );
@@ -115,7 +115,7 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
 
   if (!payment) {
     return (
-      <div className="flex h-[400px] items-center justify-center text-slate-500 font-medium">
+      <div className="flex h-100 items-center justify-center text-slate-500 font-medium">
         Transaction not found.
       </div>
     );
@@ -185,7 +185,7 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
           <Card title="Transaction & Audit Details">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm mt-2">
               <div className="flex gap-3">
-                <Calendar className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                <Calendar className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
                 <div className="flex flex-col">
                   <span className="text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wide">Transaction Date</span>
                   <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5">
@@ -195,7 +195,7 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
               </div>
 
               <div className="flex gap-3">
-                <Landmark className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                <Landmark className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
                 <div className="flex flex-col">
                   <span className="text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wide">Reference / Txn No.</span>
                   <span className="text-slate-800 dark:text-slate-200 font-mono font-bold mt-0.5">
@@ -205,7 +205,7 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
               </div>
 
               <div className="flex gap-3">
-                <User className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                <User className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
                 <div className="flex flex-col">
                   <span className="text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wide">Recorded By</span>
                   <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5">
@@ -215,7 +215,7 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
               </div>
 
               <div className="flex gap-3">
-                <Calendar className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                <Calendar className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
                 <div className="flex flex-col">
                   <span className="text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wide">System Log Created</span>
                   <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5">
@@ -330,12 +330,12 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
       {/* Cancellation confirmation modal */}
       <Modal isOpen={isCancelModalOpen} onOpenChange={(open) => { if (!open) setIsCancelModalOpen(false); }}>
         <ModalBackdrop />
-        <ModalContainer>
-          <ModalDialog className="bg-white dark:bg-slate-950 p-6 rounded-2xl max-w-md w-full text-left">
+        <ModalContainer placement="center" scroll="inside">
+          <ModalDialog className="bg-white dark:bg-slate-950 p-6 rounded-2xl max-w-md w-full text-left max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
             <ModalHeader className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-850 pb-3 mb-4">
               Cancel {isSupplier ? "Payment Voucher" : "Receipt Voucher"}
             </ModalHeader>
-            <ModalBody className="flex flex-col gap-4">
+            <ModalBody className="flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
               <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                 Are you sure you want to cancel {isSupplier ? "payment" : "receipt"} voucher{" "}
                 <strong className="text-slate-900 dark:text-white">
@@ -360,7 +360,7 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
                 />
               </TextField>
             </ModalBody>
-            <ModalFooter className="flex gap-3 justify-end mt-6">
+            <ModalFooter className="flex gap-3 justify-end mt-6 shrink-0">
               <Button
                 variant="tertiary"
                 onPress={() => {

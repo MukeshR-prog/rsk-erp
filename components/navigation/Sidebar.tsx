@@ -75,19 +75,22 @@ export default function Sidebar() {
 
   // Define Navigation Items based on Workspace
   const tradingItems = [
-    { label: "Trading Dashboard", href: "/trading", icon: LayoutDashboard },
-    { label: "Customers", href: "/master-data/contacts?type=CUSTOMER", icon: Users },
-    { label: "Suppliers", href: "/master-data/contacts?type=SUPPLIER", icon: Users },
+    { label: "Dashboard", href: "/trading", icon: LayoutDashboard },
     { label: "Purchases", href: "/trading/purchases", icon: ShoppingCart },
     { label: "Sales", href: "/trading/sales", icon: TrendingUp },
     { label: "Payments", href: "/trading/payments", icon: TrendingDown },
+    { label: "Suppliers", href: "/trading/suppliers", icon: Users },
+    { label: "Customers", href: "/trading/customers", icon: Users },
+    { label: "Stock", href: "/trading/stock", icon: Package },
+    { label: "Reports", href: "/trading/reports", icon: BarChart3 },
   ];
 
   const manufacturingItems = [
-    { label: "Manufacturing Dashboard", href: "/manufacturing", icon: LayoutDashboard },
-    { label: "Raw Materials", href: "/master-data/products?type=RAW_MATERIAL", icon: Sparkles },
-    { label: "Finished Goods", href: "/master-data/products?type=FINISHED_GOOD", icon: Factory },
-    { label: "BOM Recipes", href: "/manufacturing/bom", icon: Layers },
+    { label: "Dashboard", href: "/manufacturing", icon: LayoutDashboard },
+    { label: "Expenses", href: "/manufacturing/expenses", icon: Receipt },
+    { label: "Production", href: "/manufacturing/production", icon: Factory },
+    { label: "Finished Goods Stock", href: "/manufacturing/stock", icon: Package },
+    { label: "Reports", href: "/manufacturing/reports", icon: BarChart3 },
   ];
 
   const masterDataItems = [
@@ -214,7 +217,7 @@ export default function Sidebar() {
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-white border-r border-slate-100 dark:bg-slate-950 dark:border-slate-900 transition-transform duration-300 ease-in-out md:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-white border-r border-slate-100 dark:bg-slate-955 dark:border-slate-900 transition-transform duration-300 ease-in-out md:translate-x-0 md:z-20 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } md:sticky`}
       >

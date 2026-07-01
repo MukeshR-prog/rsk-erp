@@ -58,3 +58,41 @@ export async function getPurchaseDashboardMetricsAction() {
     };
   }
 }
+
+/**
+ * Server action to fetch P&L report metrics.
+ */
+export async function getProfitLossMetricsAction(filter: string) {
+  try {
+    const data = await DashboardService.getProfitLossMetrics(filter);
+    return {
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    console.error("getProfitLossMetricsAction failed:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to retrieve Profit & Loss report metrics.",
+    };
+  }
+}
+
+/**
+ * Server action to fetch manufacturing reports.
+ */
+export async function getManufacturingReportsAction(filter: string) {
+  try {
+    const data = await DashboardService.getManufacturingReports(filter);
+    return {
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    console.error("getManufacturingReportsAction failed:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to retrieve manufacturing reports.",
+    };
+  }
+}

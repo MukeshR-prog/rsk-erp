@@ -139,8 +139,8 @@ export const SaleForm: React.FC<SaleFormProps> = ({
   return (
     <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
       <ModalBackdrop className="bg-slate-950/80 backdrop-blur-sm" />
-      <ModalContainer>
-        <ModalDialog className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh]">
+      <ModalContainer placement="center" scroll="inside">
+        <ModalDialog className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
           <form onSubmit={handleSubmit(onSubmit)}>
             <ModalHeader className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <span className="flex items-center gap-2.5 text-slate-900 dark:text-white font-bold text-lg">
@@ -149,7 +149,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({
               </span>
             </ModalHeader>
 
-            <ModalBody className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+            <ModalBody className="px-6 py-4 flex-1 min-h-0 overflow-y-auto">
               {/* Header Fields */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4">
                 <div className="md:col-span-2">
@@ -369,7 +369,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({
               </div>
             </ModalBody>
 
-            <ModalFooter className="px-6 pb-6 pt-4 border-t border-slate-100 dark:border-slate-800 gap-3">
+            <ModalFooter className="px-6 pb-6 pt-4 border-t border-slate-100 dark:border-slate-800 gap-3 shrink-0">
               <Button variant="ghost" onPress={handleClose} type="button">
                 Cancel
               </Button>

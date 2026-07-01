@@ -100,9 +100,9 @@ export default function LoginPage() {
                   aria-label="toggle password visibility"
                 >
                   {isVisible ? (
-                    <EyeOff className="text-slate-400 w-5 h-5 flex-shrink-0" />
+                    <EyeOff className={["text-slate-400", "w-5", "h-5", "shrink-0"].join(" ")} />
                   ) : (
-                    <Eye className="text-slate-400 w-5 h-5 flex-shrink-0" />
+                    <Eye className={["text-slate-400", "w-5", "h-5", "shrink-0"].join(" ")} />
                   )}
                 </button>
               </div>

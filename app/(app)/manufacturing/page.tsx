@@ -9,204 +9,302 @@ import { getManufacturingDashboardAction } from "@/features/shared/dashboard/act
 import {
   Plus,
   Factory,
-  Wrench,
-  Layers,
-  Sparkles,
-  ArrowRight,
+  Receipt,
+  Package,
   TrendingDown,
-  Info
+  AlertTriangle,
+  ArrowRight,
+  TrendingUp
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import Link from "next/link";
+import dayjs from "dayjs";
 
 export default function ManufacturingDashboardPage() {
   const router = useRouter();
-  const { setWorkspace } = useWorkspaceStore();
-
+  const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<any>({
+    todayExpenses: 0,
+    monthlyExpenses: 0,
+    yearlyExpenses: 0,
     productionToday: 0,
-    rawMaterialConsumption: 0,
-    finishedGoodsProduced: 0,
-    manufacturingCost: 0,
-    productionExpenses: 0,
-    currentRawMaterialStock: 0,
+    productionMonth: 0,
     currentFinishedGoodsStock: 0,
-    totalRecipes: 0,
-    activeRecipes: 0,
-    finishedProductsCovered: 0,
-    recentlyUpdatedRecipes: [],
+    recentExpenses: [],
+    recentProduction: [],
+    lowStockProducts: [],
   });
 
-  // Ensure workspace store matches routing context and fetch metrics
-  useEffect(() => {
-    setWorkspace("manufacturing");
-
-    async function loadMetrics() {
+  const loadMetrics = async () => {
+    try {
+      setLoading(true);
       const res = await getManufacturingDashboardAction();
       if (res.success && res.data) {
         setMetrics(res.data);
+      } else {
+        toast.error(res.error || "Failed to load dashboard metrics");
       }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error loading dashboard metrics");
+    } finally {
+      setLoading(false);
     }
-    loadMetrics();
-  }, [setWorkspace]);
-
-  const handleShortcutClick = (actionName: string) => {
-    toast.success(`${actionName} module will be connected in subsequent phases!`);
   };
 
+  useEffect(() => {
+    loadMetrics();
+  }, []);
+
   const kpis = [
-    { title: "Today's Production", value: `${metrics.productionToday} Cases`, subtitle: "Active completed batches output" },
-    { title: "Today's Manufacturing Cost", value: `₹${metrics.manufacturingCost.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, subtitle: "Raw material + direct expenses" },
-    { title: "Raw Material Consumption", value: `${metrics.rawMaterialConsumption} Tons`, subtitle: "Processed inputs today" },
-    { title: "Finished Goods Produced", value: `${metrics.finishedGoodsProduced} Packs`, subtitle: "Completed packs output" },
-    { title: "Today's Manufacturing Expenses", value: `₹${metrics.productionExpenses.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, subtitle: "Direct indirect/row costs" },
-    { title: "Current Raw Material Stock", value: `${metrics.currentRawMaterialStock} Tons`, subtitle: "Warehouse stock level log" },
-    { title: "Current Finished Goods Stock", value: `${metrics.currentFinishedGoodsStock} Cases`, subtitle: "Shippable storage levels" },
-    { title: "Total BOM Recipes", value: `${metrics.totalRecipes} Recipes`, subtitle: "Logged structural recipes" },
-    { title: "Active BOM Recipes", value: `${metrics.activeRecipes} Active`, subtitle: "Available for planning" },
-    { title: "Finished Goods Covered", value: `${metrics.finishedProductsCovered} Products`, subtitle: "Unique finished goods covered" },
+    {
+      title: "Today's Expenses",
+      value: `₹${metrics.todayExpenses.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+      subtitle: "Expenses recorded today",
+      color: "border-l-red-500",
+      textColor: "text-red-650 dark:text-red-400"
+    },
+    {
+      title: "Monthly Expenses",
+      value: `₹${metrics.monthlyExpenses.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+      subtitle: "Recorded this month",
+      color: "border-l-orange-500",
+      textColor: "text-orange-655"
+    },
+    {
+      title: "Yearly Expenses",
+      value: `₹${metrics.yearlyExpenses.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+      subtitle: "Total this year",
+      color: "border-l-purple-500",
+      textColor: "text-purple-600"
+    },
+    {
+      title: "Today's Production",
+      value: `${metrics.productionToday} Boxes`,
+      subtitle: "Boxes finished today",
+      color: "border-l-emerald-500",
+      textColor: "text-emerald-600 dark:text-emerald-400"
+    },
+    {
+      title: "Monthly Production",
+      value: `${metrics.productionMonth} Boxes`,
+      subtitle: "Total boxes this month",
+      color: "border-l-blue-500",
+      textColor: "text-blue-600 dark:text-blue-400"
+    },
+    {
+      title: "Finished Goods Stock",
+      value: `${metrics.currentFinishedGoodsStock} Boxes`,
+      subtitle: "Current available boxes",
+      color: "border-l-teal-500",
+      textColor: "text-teal-600 dark:text-teal-400"
+    }
   ];
 
-  const quickActions = [
-    { label: "Start Production", icon: Factory, color: "bg-emerald-600 text-white", click: () => handleShortcutClick("Start Production Batch") },
-    { label: "Add Factory Expense", icon: TrendingDown, color: "bg-emerald-600 text-white", click: () => handleShortcutClick("Factory Expense Logs") },
-    { label: "Create BOM Recipe", icon: Layers, color: "bg-emerald-600 text-white", click: () => router.push("/manufacturing/bom?new=true") },
-  ];
-
-  const navigationShortcuts = [
-    { label: "Bill of Materials", href: "/manufacturing/bom", desc: "Manage cup & tissue structural recipes", icon: Layers },
-    { label: "Raw Materials", href: "/master-data/products?type=RAW_MATERIAL", desc: "Browse rolls, chemicals & packaging catalogs", icon: Sparkles },
-    { label: "Finished Goods", href: "/master-data/products?type=FINISHED_GOOD", desc: "Browse finished cup & tissue stock catalogs", icon: Factory },
-    { label: "Production Runs", href: "/manufacturing/batches", desc: "View logged raw material batch runs", icon: Wrench, click: () => handleShortcutClick("Production Batches") },
-    { label: "Reports", href: "/manufacturing/reports", desc: "Yield analysis & factory cost reports", icon: Layers, click: () => handleShortcutClick("Manufacturing Reports") },
-  ];
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-slate-350 border-t-slate-900 dark:border-slate-800 dark:border-t-slate-100 animate-spin" />
+          <span className="text-xs text-slate-500 font-semibold tracking-wider uppercase">
+            Loading metrics...
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <Header
         title="Manufacturing Dashboard"
-        subtitle="Cups, tissues, and raw materials production floor"
+        subtitle="Cup & Tissue production tracking & floor expenses"
         action={
-          <Button
-            variant="primary"
-            onPress={() => handleShortcutClick("Start Production Run")}
-            className="w-full sm:w-auto font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white border-none"
-            size="md"
-          >
-            <Plus className="w-4.5 h-4.5 mr-1.5" />
-            <span>Start Production</span>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onPress={() => router.push("/manufacturing/expenses?new=true")}
+              className="w-full sm:w-auto font-bold rounded-xl border-slate-200"
+            >
+              <Receipt className="w-4 h-4 mr-1.5 text-slate-500" />
+              <span>Record Expense</span>
+            </Button>
+            <Button
+              variant="primary"
+              onPress={() => router.push("/manufacturing/production?new=true")}
+              className="w-full sm:w-auto font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white border-none h-11"
+            >
+              <Plus className="w-4.5 h-4.5 mr-1.5" />
+              <span>Record Production</span>
+            </Button>
+          </div>
         }
       />
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:grid-cols-6">
         {kpis.map((kpi) => (
           <Card
             key={kpi.title}
-            className="border-l-4 border-l-emerald-200 dark:border-l-emerald-900"
+            className={`border-l-4 ${kpi.color} p-4 bg-white dark:bg-slate-900 shadow-md rounded-2xl`}
             title={kpi.title}
             subtitle={kpi.subtitle}
           >
-            <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-805 dark:text-slate-105 block mt-1">
+            <span className={`text-lg sm:text-xl font-extrabold tracking-tight block mt-1.5 ${kpi.textColor}`}>
               {kpi.value}
             </span>
           </Card>
         ))}
       </div>
 
-      {/* Quick Action Shortcuts Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card title="Factory Floor Tasks" className="md:col-span-2" subtitle="Daily operations shortcuts for manufacturing runs">
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <Button
-                  key={action.label}
-                  variant="tertiary"
-                  className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-100 dark:border-slate-850"
-                  onPress={action.click}
-                >
-                  <Icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate w-full text-center">
-                    {action.label}
-                  </span>
-                </Button>
-              );
-            })}
-          </div>
-        </Card>
+      {/* Main floor logs layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Recent Production Entries */}
+        <div className="xl:col-span-2 flex flex-col gap-6">
+          <Card
+            title="Recent Production entries"
+            subtitle="Last 5 finished goods logs"
+            headerAction={
+              <Link href="/manufacturing/production" className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5">
+                <span>View all</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            }
+          >
+            <div className="overflow-x-auto py-1">
+              {metrics.recentProduction && metrics.recentProduction.length > 0 ? (
+                <table className="w-full text-left border-collapse text-xs font-medium">
+                  <thead>
+                    <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-455 uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Entry No</th>
+                      <th className="py-2.5 px-3">Product</th>
+                      <th className="py-2.5 px-3 text-right">Qty Produced</th>
+                      <th className="py-2.5 px-3 text-right">Pieces/Box</th>
+                      <th className="py-2.5 px-3 text-right">Total Pieces</th>
+                      <th className="py-2.5 px-3">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.recentProduction.map((item: any) => (
+                      <tr key={item.id} className="border-b border-slate-50 dark:border-slate-905 hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                        <td className="py-3 px-3 font-bold text-slate-900 dark:text-slate-100">{item.number}</td>
+                        <td className="py-3 px-3 font-semibold text-slate-700 dark:text-slate-300">{item.productName}</td>
+                        <td className="py-3 px-3 text-right font-bold text-emerald-600">{item.boxesProduced} Boxes</td>
+                        <td className="py-3 px-3 text-right text-slate-400 font-semibold">{item.piecesPerBox.toLocaleString()}</td>
+                        <td className="py-3 px-3 text-right font-bold text-slate-800 dark:text-slate-100">{item.totalPieces.toLocaleString()} pcs</td>
+                        <td className="py-3 px-3 text-slate-500 font-semibold">{dayjs(item.date).format("DD MMM YYYY")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="text-center py-10 text-slate-400 font-semibold">
+                  No production logged yet. Click "Record Production" to log outputs.
+                </div>
+              )}
+            </div>
+          </Card>
 
-        {/* Recent BOM Recipes Card */}
-        <Card title="Recent BOM Recipes" subtitle="Top 5 recently updated recipes">
-          <div className="flex flex-col gap-2.5 mt-1.5 text-xs">
-            {metrics.recentlyUpdatedRecipes && metrics.recentlyUpdatedRecipes.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {metrics.recentlyUpdatedRecipes.map((r: any) => (
-                  <Link key={r.id} href={`/manufacturing/bom/${r.id}`}>
-                    <div className="flex justify-between items-center p-2 rounded-xl border border-slate-100 hover:border-slate-300 dark:border-slate-850 dark:hover:border-slate-800 bg-white dark:bg-slate-900 transition-all cursor-pointer">
-                      <div className="flex flex-col min-w-0 pl-1">
-                        <span className="font-bold text-slate-905 dark:text-white truncate">{r.name}</span>
-                        <span className="text-[10px] text-slate-400 mt-0.5">{r.finishedProductName} • {r.itemCount} items</span>
+          {/* Recent Expenses */}
+          <Card
+            title="Recent Factory Expenses"
+            subtitle="Last 5 direct manufacturing expenses"
+            headerAction={
+              <Link href="/manufacturing/expenses" className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5">
+                <span>View all</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            }
+          >
+            <div className="overflow-x-auto py-1">
+              {metrics.recentExpenses && metrics.recentExpenses.length > 0 ? (
+                <table className="w-full text-left border-collapse text-xs font-medium">
+                  <thead>
+                    <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-455 uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Expense No</th>
+                      <th className="py-2.5 px-3">Category</th>
+                      <th className="py-2.5 px-3">Description</th>
+                      <th className="py-2.5 px-3 text-right">Amount</th>
+                      <th className="py-2.5 px-3">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.recentExpenses.map((item: any) => (
+                      <tr key={item.id} className="border-b border-slate-50 dark:border-slate-905 hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                        <td className="py-3 px-3 font-bold text-slate-900 dark:text-slate-100">{item.number}</td>
+                        <td className="py-3 px-3">
+                          <span className="bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400 font-bold px-2 py-0.5 rounded-lg">
+                            {item.categoryName}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 truncate max-w-xs">{item.description}</td>
+                        <td className="py-3 px-3 text-right font-extrabold text-red-600">₹{item.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                        <td className="py-3 px-3 text-slate-500 font-semibold">{dayjs(item.date).format("DD MMM YYYY")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="text-center py-10 text-slate-400 font-semibold">
+                  No factory expenses logged yet.
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        {/* Sidebar Alerts */}
+        <div className="flex flex-col gap-6">
+          <Card title="Finished Goods Low Stock" subtitle="Items below minimum alert limit">
+            <div className="flex flex-col gap-3 mt-1 text-xs">
+              {metrics.lowStockProducts && metrics.lowStockProducts.length > 0 ? (
+                <div className="flex flex-col gap-2.5">
+                  {metrics.lowStockProducts.map((p: any) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center gap-3 p-3 rounded-2xl border border-red-100 dark:border-red-950/30 bg-red-50/30 dark:bg-red-950/10"
+                    >
+                      <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-bold text-slate-900 dark:text-slate-50 truncate">
+                          {p.name}
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-0.5">
+                          SKU: {p.code}
+                        </span>
                       </div>
-                      <span className="font-extrabold text-[10px] text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-1 rounded-lg">
-                        {r.wasteFactorPercent.toFixed(1)}%
+                      <span className="font-extrabold text-red-600 text-sm">
+                        {p.currentStock} Bxs
                       </span>
                     </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-slate-400 font-semibold">
-                No BOM Recipes created yet.
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {/* Navigation Shortcuts */}
-      <Card title="Navigation Shortcuts" subtitle="Fast links to factory sub-menus and databases">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {navigationShortcuts.map((shortcut) => {
-            const Icon = shortcut.icon;
-            const content = (
-              <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-slate-300 dark:border-slate-850 dark:hover:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-200 cursor-pointer group">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-slate-50 dark:bg-slate-950 rounded-xl text-slate-700 dark:text-slate-350">
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-slate-900 dark:text-slate-50">
-                      {shortcut.label}
-                    </span>
-                    <span className="text-xs text-slate-450 dark:text-slate-500 mt-0.5">
-                      {shortcut.desc}
-                    </span>
-                  </div>
+                  ))}
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-450 group-hover:translate-x-1 transition-transform" />
-              </div>
-            );
-
-            if (shortcut.click) {
-              return (
-                <div key={shortcut.label} onClick={shortcut.click}>
-                  {content}
+              ) : (
+                <div className="text-center py-8 text-slate-400 font-semibold">
+                  Stock levels are healthy. No alerts.
                 </div>
-              );
-            }
+              )}
+            </div>
+          </Card>
 
-            return (
-              <Link key={shortcut.label} href={shortcut.href}>
-                {content}
-              </Link>
-            );
-          })}
+          <Card title="Production Quick View" subtitle="Key manufactured articles">
+            <div className="flex flex-col gap-3 p-1">
+              <div className="flex justify-between items-center text-xs p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 font-semibold">
+                <span className="text-slate-500">Workspace Status</span>
+                <span className="text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-lg font-bold">
+                  Active
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 font-semibold">
+                <span className="text-slate-500">Centralized stock</span>
+                <span className="text-slate-800 dark:text-slate-200 font-bold">
+                  Synchronized
+                </span>
+              </div>
+            </div>
+          </Card>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

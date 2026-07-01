@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { LedgerService } from "@/features/trading/payments/ledger.service";
+import { Prisma } from "@prisma/client";
 
 export const DashboardService = {
   /**
@@ -15,14 +16,9 @@ export const DashboardService = {
     const todayPurchasesAgg = await prisma.purchase.aggregate({
       where: {
         status: "COMPLETED",
-        purchaseDate: {
-          gte: startOfToday,
-          lte: endOfToday,
-        },
+        purchaseDate: { gte: startOfToday, lte: endOfToday },
       },
-      _sum: {
-        grandTotal: true,
-      },
+      _sum: { grandTotal: true },
     });
     const todayPurchases = Number(todayPurchasesAgg._sum.grandTotal || 0);
 
@@ -30,45 +26,33 @@ export const DashboardService = {
     const todaySalesAgg = await prisma.sale.aggregate({
       where: {
         status: "COMPLETED",
-        saleDate: {
-          gte: startOfToday,
-          lte: endOfToday,
-        },
+        saleDate: { gte: startOfToday, lte: endOfToday },
       },
-      _sum: {
-        grandTotal: true,
-      },
+      _sum: { grandTotal: true },
     });
     const todaySales = Number(todaySalesAgg._sum.grandTotal || 0);
 
-    // 2b. Monthly Sales
-    const monthlySalesAgg = await prisma.sale.aggregate({
-      where: {
-        status: "COMPLETED",
-        saleDate: {
-          gte: startOfMonth,
-          lte: endOfToday,
-        },
-      },
-      _sum: {
-        grandTotal: true,
-      },
+    // 2b. Total Purchases & Sales (historical sums)
+    const totalPurchasesAgg = await prisma.purchase.aggregate({
+      where: { status: "COMPLETED" },
+      _sum: { grandTotal: true },
     });
-    const monthlySales = Number(monthlySalesAgg._sum.grandTotal || 0);
+    const totalPurchases = Number(totalPurchasesAgg._sum.grandTotal || 0);
+
+    const totalSalesAgg = await prisma.sale.aggregate({
+      where: { status: "COMPLETED" },
+      _sum: { grandTotal: true },
+    });
+    const totalSales = Number(totalSalesAgg._sum.grandTotal || 0);
 
     // 3. Today's Payments (SUPPLIER_PAYMENT)
     const todayPaymentsAgg = await prisma.payment.aggregate({
       where: {
         paymentType: "SUPPLIER_PAYMENT",
         status: "COMPLETED",
-        paymentDate: {
-          gte: startOfToday,
-          lte: endOfToday,
-        },
+        paymentDate: { gte: startOfToday, lte: endOfToday },
       },
-      _sum: {
-        amount: true,
-      },
+      _sum: { amount: true },
     });
     const todayPayments = Number(todayPaymentsAgg._sum.amount || 0);
 
@@ -77,23 +61,15 @@ export const DashboardService = {
       where: {
         paymentType: "CUSTOMER_RECEIPT",
         status: "COMPLETED",
-        paymentDate: {
-          gte: startOfToday,
-          lte: endOfToday,
-        },
+        paymentDate: { gte: startOfToday, lte: endOfToday },
       },
-      _sum: {
-        amount: true,
-      },
+      _sum: { amount: true },
     });
     const todayCollections = Number(todayCollectionsAgg._sum.amount || 0);
 
     // 5. Outstanding Suppliers
     const suppliers = await prisma.contact.findMany({
-      where: {
-        type: "SUPPLIER",
-        isActive: true,
-      },
+      where: { type: "SUPPLIER", isActive: true },
       select: { id: true },
     });
     let supplierOutstanding = 0;
@@ -103,10 +79,7 @@ export const DashboardService = {
 
     // 6. Outstanding Customers
     const customers = await prisma.contact.findMany({
-      where: {
-        type: "CUSTOMER",
-        isActive: true,
-      },
+      where: { type: "CUSTOMER", isActive: true },
       select: { id: true },
     });
     let customerOutstanding = 0;
@@ -114,135 +87,143 @@ export const DashboardService = {
       customerOutstanding += await LedgerService.getCustomerOutstanding(c.id, prisma);
     }
 
-    // 7. Recent Purchases (5 most recent completed purchases)
-    const recentPurchases = await prisma.purchase.findMany({
-      orderBy: {
-        purchaseDate: "desc",
-      },
+    // 7. Recent Sales (5 most recent completed sales)
+    const recentSales = await prisma.sale.findMany({
+      orderBy: { saleDate: "desc" },
       take: 5,
       include: {
-        supplier: {
-          select: { name: true },
-        },
+        customer: { select: { name: true } },
       },
     });
 
-    // 7b. Recent Sales (5 most recent completed sales)
-    const recentSales = await prisma.sale.findMany({
-      orderBy: {
-        saleDate: "desc",
-      },
+    // Recent Purchases (5 most recent completed purchases)
+    const recentPurchases = await prisma.purchase.findMany({
+      orderBy: { purchaseDate: "desc" },
       take: 5,
       include: {
-        customer: {
-          select: { name: true },
-        },
+        supplier: { select: { name: true } },
       },
     });
 
     // 8. Recent Payments (5 most recent completed payments)
     const recentPayments = await prisma.payment.findMany({
-      orderBy: {
-        paymentDate: "desc",
-      },
+      orderBy: { paymentDate: "desc" },
       take: 5,
       include: {
-        contact: {
-          select: { name: true },
-        },
+        contact: { select: { name: true } },
       },
-    });
-
-    // 8b. Top Customers
-    const topCustomersAgg = await prisma.sale.groupBy({
-      by: ["customerId"],
-      where: {
-        status: "COMPLETED",
-      },
-      _sum: {
-        grandTotal: true,
-      },
-      orderBy: {
-        _sum: {
-          grandTotal: "desc",
-        },
-      },
-      take: 5,
-    });
-    const topCustomersIds = topCustomersAgg.map((x) => x.customerId);
-    const topCustomersProfiles = await prisma.contact.findMany({
-      where: {
-        id: { in: topCustomersIds },
-      },
-      select: { id: true, name: true },
-    });
-    const topCustomers = topCustomersAgg.map((agg) => {
-      const profile = topCustomersProfiles.find((p) => p.id === agg.customerId);
-      return {
-        id: agg.customerId,
-        name: profile?.name || "Unknown Customer",
-        totalSales: Number(agg._sum.grandTotal || 0),
-      };
     });
 
     // 9. Current Stock Value (Sum of Product currentStock * averageCost)
     const products = await prisma.product.findMany({
-      where: {
-        isActive: true,
-      },
-      select: {
-        currentStock: true,
-        averageCost: true,
-      },
+      where: { isActive: true },
+      select: { currentStock: true, averageCost: true },
     });
-    let currentStockValue = 0;
-    products.forEach((p) => {
-      currentStockValue += Number(p.currentStock || 0) * Number(p.averageCost || 0);
-    });
+    const currentStockValue = products.reduce(
+      (sum, p) => sum + Number(p.currentStock || 0) * Number(p.averageCost || 0),
+      0
+    );
 
-    // 9b. Low Stock Products
+    // 10. Low Stock Products
     const lowStockProducts = await prisma.product.findMany({
-      where: {
-        isActive: true,
-        currentStock: {
-          lte: 10,
-        },
-      },
-      orderBy: {
-        currentStock: "asc",
-      },
+      where: { isActive: true, currentStock: { lte: 10 } },
+      orderBy: { currentStock: "asc" },
       take: 5,
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        currentStock: true,
-      },
+      select: { id: true, name: true, code: true, currentStock: true },
     });
 
-    // 10. Low Stock Count
-    const lowStockCount = await prisma.product.count({
+    // Top Purchased Products (summing line quantities from completed purchases)
+    const topPurchasesAgg = await prisma.purchaseItem.groupBy({
+      by: ["productId"],
+      where: { purchase: { status: "COMPLETED" } },
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: "desc" } },
+      take: 5,
+    });
+    const topPurchasedIds = topPurchasesAgg.map((x) => x.productId);
+    const topPurchasedProducts = await prisma.product.findMany({
+      where: { id: { in: topPurchasedIds } },
+      select: { id: true, name: true, code: true },
+    });
+    const topPurchased = topPurchasesAgg.map((agg) => {
+      const p = topPurchasedProducts.find((x) => x.id === agg.productId);
+      return {
+        id: agg.productId,
+        name: p?.name || "Unknown Product",
+        code: p?.code || "",
+        totalQty: Number(agg._sum.quantity || 0),
+      };
+    });
+
+    // Top Sold Products (summing line quantities from completed sales)
+    const topSalesAgg = await prisma.saleItem.groupBy({
+      by: ["productId"],
+      where: { sale: { status: "COMPLETED" } },
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: "desc" } },
+      take: 5,
+    });
+    const topSoldIds = topSalesAgg.map((x) => x.productId);
+    const topSoldProducts = await prisma.product.findMany({
+      where: { id: { in: topSoldIds } },
+      select: { id: true, name: true, code: true },
+    });
+    const topSold = topSalesAgg.map((agg) => {
+      const p = topSoldProducts.find((x) => x.id === agg.productId);
+      return {
+        id: agg.productId,
+        name: p?.name || "Unknown Product",
+        code: p?.code || "",
+        totalQty: Number(agg._sum.quantity || 0),
+      };
+    });
+
+    // Monthly Sales
+    const monthlySalesAgg = await prisma.sale.aggregate({
       where: {
-        isActive: true,
-        currentStock: {
-          lte: 10,
-        },
+        status: "COMPLETED",
+        saleDate: { gte: startOfMonth, lte: endOfToday },
       },
+      _sum: { grandTotal: true },
+    });
+    const monthlySales = Number(monthlySalesAgg._sum.grandTotal || 0);
+
+    // Monthly Purchases
+    const monthlyPurchasesAgg = await prisma.purchase.aggregate({
+      where: {
+        status: "COMPLETED",
+        purchaseDate: { gte: startOfMonth, lte: endOfToday },
+      },
+      _sum: { grandTotal: true },
+    });
+    const monthlyPurchases = Number(monthlyPurchasesAgg._sum.grandTotal || 0);
+
+    // Count all low stock items
+    const lowStockCount = await prisma.product.count({
+      where: { isActive: true, currentStock: { lte: 10 } },
     });
 
+    // Cash flow: today's collections minus today's payments
     const todayCashFlow = todayCollections - todayPayments;
+
+    // Direct P&L totals (P&L trading part)
+    const grossProfit = totalSales - totalPurchases;
 
     return {
       metrics: {
         todayPurchases,
         todaySales,
+        monthlyPurchases,
         monthlySales,
-        todayPayments,
-        todayCollections,
-        todayCashFlow,
+        totalPurchases,
+        totalSales,
         supplierOutstanding,
         customerOutstanding,
         currentStockValue,
+        todayCashFlow,
+        grossProfit,
+        todayPayments,
+        todayCollections,
         lowStockCount,
       },
       recentPurchases: recentPurchases.map((p) => ({
@@ -267,9 +248,11 @@ export const DashboardService = {
         supplierName: p.contact.name,
         date: p.paymentDate.toISOString(),
         amount: Number(p.amount),
+        type: p.paymentType,
         status: p.status,
       })),
-      topCustomers,
+      topPurchasedProducts: topPurchased,
+      topSoldProducts: topSold,
       lowStockProducts: lowStockProducts.map((p) => ({
         id: p.id,
         name: p.name,
@@ -286,150 +269,107 @@ export const DashboardService = {
     const today = new Date();
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
+    const startOfYear = new Date(today.getFullYear(), 0, 1, 0, 0, 0, 0);
 
-    // 1. Production Today
-    const productionTodayAgg = await prisma.productionBatch.aggregate({
-      where: {
-        status: "COMPLETED",
-        batchDate: {
-          gte: startOfToday,
-          lte: endOfToday,
-        },
-      },
-      _sum: {
-        quantityProduced: true,
-      },
+    // 1. Today's Expenses
+    const expensesTodayAgg = await prisma.manufacturingExpense.aggregate({
+      where: { expenseDate: { gte: startOfToday, lte: endOfToday } },
+      _sum: { amount: true },
     });
-    const productionToday = Number(productionTodayAgg._sum.quantityProduced || 0);
+    const todayExpenses = Number(expensesTodayAgg._sum.amount || 0);
 
-    // 2. Raw Material Consumption Today
-    const materialConsumedAgg = await prisma.productionMaterial.aggregate({
-      where: {
-        batch: {
-          status: "COMPLETED",
-          batchDate: {
-            gte: startOfToday,
-            lte: endOfToday,
-          },
-        },
-      },
-      _sum: {
-        quantityConsumed: true,
-      },
+    // 2. Monthly Expenses
+    const expensesMonthAgg = await prisma.manufacturingExpense.aggregate({
+      where: { expenseDate: { gte: startOfMonth, lte: endOfToday } },
+      _sum: { amount: true },
     });
-    const rawMaterialConsumption = Number(materialConsumedAgg._sum.quantityConsumed || 0);
+    const monthlyExpenses = Number(expensesMonthAgg._sum.amount || 0);
 
-    // 3. Finished Goods Produced Today
-    // Same as batch production count for today
-    const finishedGoodsProduced = productionToday;
-
-    // 4. Today's Manufacturing Cost (Materials + Expenses)
-    const costAgg = await prisma.productionBatch.aggregate({
-      where: {
-        status: "COMPLETED",
-        batchDate: {
-          gte: startOfToday,
-          lte: endOfToday,
-        },
-      },
-      _sum: {
-        totalBatchCost: true,
-      },
+    // 3. Yearly Expenses
+    const expensesYearAgg = await prisma.manufacturingExpense.aggregate({
+      where: { expenseDate: { gte: startOfYear, lte: endOfToday } },
+      _sum: { amount: true },
     });
-    const manufacturingCost = Number(costAgg._sum.totalBatchCost || 0);
+    const yearlyExpenses = Number(expensesYearAgg._sum.amount || 0);
 
-    // 5. Today's Production Expenses (Indirect / Row Expenses)
-    const expensesAgg = await prisma.productionExpense.aggregate({
-      where: {
-        batch: {
-          status: "COMPLETED",
-          batchDate: {
-            gte: startOfToday,
-            lte: endOfToday,
-          },
-        },
-      },
-      _sum: {
-        amount: true,
-      },
+    // 4. Today's Production (Boxes)
+    const productionTodayAgg = await prisma.productionEntry.aggregate({
+      where: { productionDate: { gte: startOfToday, lte: endOfToday } },
+      _sum: { boxesProduced: true },
     });
-    const productionExpenses = Number(expensesAgg._sum.amount || 0);
+    const productionToday = Number(productionTodayAgg._sum.boxesProduced || 0);
 
-    // 6. Current Raw Material Stock
-    const rmProducts = await prisma.product.findMany({
-      where: {
-        type: "RAW_MATERIAL",
-        isActive: true,
-      },
-      select: { currentStock: true },
+    // 5. Monthly Production (Boxes)
+    const productionMonthAgg = await prisma.productionEntry.aggregate({
+      where: { productionDate: { gte: startOfMonth, lte: endOfToday } },
+      _sum: { boxesProduced: true },
     });
-    let currentRawMaterialStock = rmProducts.reduce((sum, p) => sum + Number(p.currentStock || 0), 0);
+    const productionMonth = Number(productionMonthAgg._sum.boxesProduced || 0);
 
-    // 7. Current Finished Goods Stock
+    // 6. Current Finished Goods Stock
     const fgProducts = await prisma.product.findMany({
-      where: {
-        type: "FINISHED_GOOD",
-        isActive: true,
-      },
+      where: { type: "FINISHED_GOOD", isActive: true },
       select: { currentStock: true },
     });
-    let currentFinishedGoodsStock = fgProducts.reduce((sum, p) => sum + Number(p.currentStock || 0), 0);
+    const currentFinishedGoodsStock = fgProducts.reduce((sum, p) => sum + Number(p.currentStock || 0), 0);
 
-    // 8. BOM Recipes Metrics
-    const totalRecipes = await prisma.bOMRecipe.count();
-    const activeRecipes = await prisma.bOMRecipe.count({
-      where: { isActive: true },
-    });
-
-    const distinctFinished = await prisma.bOMRecipe.findMany({
-      where: { isActive: true },
-      select: { finishedProductId: true },
-      distinct: ["finishedProductId"],
-    });
-    const finishedProductsCovered = distinctFinished.length;
-
-    const recentlyUpdated = await prisma.bOMRecipe.findMany({
+    // 7. Recent Expenses
+    const recentExpenses = await prisma.manufacturingExpense.findMany({
       take: 5,
-      orderBy: { updatedAt: "desc" },
-      include: {
-        finishedProduct: {
-          select: {
-            name: true,
-          },
-        },
-        items: {
-          select: {
-            id: true,
-          },
-        },
-      },
+      orderBy: { expenseDate: "desc" },
+      include: { category: true },
     });
-    const recentlyUpdatedRecipes = recentlyUpdated.map((r) => ({
-      id: r.id,
-      name: r.name,
-      finishedProductName: r.finishedProduct.name,
-      itemCount: r.items.length,
-      wasteFactorPercent: Number(r.wasteFactorPercent),
-      updatedAt: r.updatedAt.toISOString(),
-    }));
+
+    // 8. Recent Production Entries
+    const recentProduction = await prisma.productionEntry.findMany({
+      take: 5,
+      orderBy: { productionDate: "desc" },
+      include: { product: true },
+    });
+
+    // 9. Low Stock Finished Goods
+    const lowStockProducts = await prisma.product.findMany({
+      where: { type: "FINISHED_GOOD", isActive: true, currentStock: { lte: 10 } },
+      orderBy: { currentStock: "asc" },
+      take: 5,
+    });
 
     return {
+      todayExpenses,
+      monthlyExpenses,
+      yearlyExpenses,
       productionToday,
-      rawMaterialConsumption,
-      finishedGoodsProduced,
-      manufacturingCost,
-      productionExpenses,
-      currentRawMaterialStock,
+      productionMonth,
       currentFinishedGoodsStock,
-      totalRecipes,
-      activeRecipes,
-      finishedProductsCovered,
-      recentlyUpdatedRecipes,
+      recentExpenses: recentExpenses.map((x) => ({
+        id: x.id,
+        number: x.expenseNumber,
+        categoryName: x.category.name,
+        description: x.description,
+        amount: Number(x.amount),
+        date: x.expenseDate.toISOString(),
+      })),
+      recentProduction: recentProduction.map((x) => ({
+        id: x.id,
+        number: x.productionNumber,
+        productName: x.product.name,
+        boxesProduced: Number(x.boxesProduced),
+        piecesPerBox: x.piecesPerBox,
+        totalPieces: Number(x.totalPieces),
+        date: x.productionDate.toISOString(),
+      })),
+      lowStockProducts: lowStockProducts.map((p) => ({
+        id: p.id,
+        name: p.name,
+        code: p.code,
+        currentStock: Number(p.currentStock),
+      })),
     };
   },
 
   /**
-   * Calculates metrics for the Purchases module.
+   * Calculates metrics for the Purchases Dashboard.
    */
   async getPurchaseMetrics() {
     const today = new Date();
@@ -446,10 +386,7 @@ export const DashboardService = {
       prisma.purchase.aggregate({
         where: {
           status: "COMPLETED",
-          purchaseDate: {
-            gte: startOfToday,
-            lte: endOfToday,
-          },
+          purchaseDate: { gte: startOfToday, lte: endOfToday },
         },
         _sum: { grandTotal: true },
       }),
@@ -457,9 +394,7 @@ export const DashboardService = {
       prisma.purchase.aggregate({
         where: {
           status: "COMPLETED",
-          paymentStatus: {
-            in: ["UNPAID", "PARTIALLY_PAID"],
-          },
+          paymentStatus: { in: ["UNPAID", "PARTIALLY_PAID"] },
         },
         _sum: { grandTotal: true },
       }),
@@ -469,6 +404,268 @@ export const DashboardService = {
       totalPurchases: Number(allCompleted._sum.grandTotal || 0),
       todayPurchases: Number(todayCompleted._sum.grandTotal || 0),
       pendingPayments: Number(pendingPayments._sum.grandTotal || 0),
+    };
+  },
+
+  /**
+   * Unified P&L Report Calculations
+   */
+  async getProfitLossMetrics(filter: "daily" | "weekly" | "monthly" | "yearly" | string) {
+    const today = new Date();
+    let startDate = new Date();
+
+    if (filter === "daily") {
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30); // Last 30 days
+    } else if (filter === "weekly") {
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 84); // Last 12 weeks
+    } else if (filter === "monthly") {
+      startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1); // Last 12 months
+    } else {
+      startDate = new Date(today.getFullYear() - 5, 0, 1); // Last 5 years
+    }
+
+    // 1. Fetch completed sales in period
+    const sales = await prisma.sale.findMany({
+      where: { status: "COMPLETED", saleDate: { gte: startDate } },
+      select: { saleDate: true, grandTotal: true },
+    });
+
+    // 2. Fetch completed purchases in period
+    const purchases = await prisma.purchase.findMany({
+      where: { status: "COMPLETED", purchaseDate: { gte: startDate } },
+      select: { purchaseDate: true, grandTotal: true },
+    });
+
+    // 3. Fetch completed manufacturing expenses in period
+    const expenses = await prisma.manufacturingExpense.findMany({
+      where: { expenseDate: { gte: startDate } },
+      select: { expenseDate: true, amount: true },
+    });
+
+    // Grouping helper
+    const getGroupKey = (date: Date): string => {
+      const d = new Date(date);
+      if (filter === "daily") {
+        return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+      } else if (filter === "weekly") {
+        // Simple week number grouping
+        const onejan = new Date(d.getFullYear(), 0, 1);
+        const weekNum = Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
+        return `Wk ${weekNum}-${d.getFullYear()}`;
+      } else if (filter === "monthly") {
+        return d.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+      } else {
+        return String(d.getFullYear());
+      }
+    };
+
+    const dataMap: Record<string, { label: string; sales: number; purchases: number; expenses: number }> = {};
+
+    // Initialize labels chronologically
+    let runner = new Date(startDate);
+    const endRange = new Date();
+    while (runner <= endRange) {
+      const key = getGroupKey(runner);
+      dataMap[key] = { label: key, sales: 0, purchases: 0, expenses: 0 };
+      if (filter === "daily") {
+        runner.setDate(runner.getDate() + 1);
+      } else if (filter === "weekly") {
+        runner.setDate(runner.getDate() + 7);
+      } else if (filter === "monthly") {
+        runner.setMonth(runner.getMonth() + 1);
+      } else {
+        runner.setFullYear(runner.getFullYear() + 1);
+      }
+    }
+
+    // Force current date's key is in map
+    const finalKey = getGroupKey(endRange);
+    if (!dataMap[finalKey]) {
+      dataMap[finalKey] = { label: finalKey, sales: 0, purchases: 0, expenses: 0 };
+    }
+
+    // Populate Sales
+    sales.forEach((s) => {
+      const key = getGroupKey(s.saleDate);
+      if (dataMap[key]) {
+        dataMap[key].sales += Number(s.grandTotal);
+      }
+    });
+
+    // Populate Purchases
+    purchases.forEach((p) => {
+      const key = getGroupKey(p.purchaseDate);
+      if (dataMap[key]) {
+        dataMap[key].purchases += Number(p.grandTotal);
+      }
+    });
+
+    // Populate Expenses
+    expenses.forEach((e) => {
+      const key = getGroupKey(e.expenseDate);
+      if (dataMap[key]) {
+        dataMap[key].expenses += Number(e.amount);
+      }
+    });
+
+    const chartData = Object.values(dataMap).map((item) => {
+      const grossProfit = item.sales - item.purchases;
+      const netProfit = grossProfit - item.expenses;
+      return {
+        ...item,
+        grossProfit,
+        netProfit,
+      };
+    });
+
+    // Aggregate totals for the filter duration
+    const totalSales = sales.reduce((sum, s) => sum + Number(s.grandTotal), 0);
+    const totalPurchases = purchases.reduce((sum, p) => sum + Number(p.grandTotal), 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+    const grossProfit = totalSales - totalPurchases;
+    const netProfit = grossProfit - totalExpenses;
+
+    // Additional P&L items
+    const products = await prisma.product.findMany({
+      where: { isActive: true },
+      select: { currentStock: true, averageCost: true },
+    });
+    const currentInventoryValue = products.reduce(
+      (sum, p) => sum + Number(p.currentStock || 0) * Number(p.averageCost || 0),
+      0
+    );
+
+    // Sum outstanding dynamically
+    const suppliers = await prisma.contact.findMany({ where: { type: "SUPPLIER", isActive: true }, select: { id: true } });
+    let outstandingSupplierAmount = 0;
+    for (const s of suppliers) {
+      outstandingSupplierAmount += await LedgerService.getSupplierOutstanding(s.id, prisma);
+    }
+
+    const customers = await prisma.contact.findMany({ where: { type: "CUSTOMER", isActive: true }, select: { id: true } });
+    let outstandingCustomerAmount = 0;
+    for (const c of customers) {
+      outstandingCustomerAmount += await LedgerService.getCustomerOutstanding(c.id, prisma);
+    }
+
+    return {
+      period: filter,
+      summary: {
+        totalSales,
+        totalPurchases,
+        totalExpenses,
+        grossProfit,
+        netProfit,
+        currentInventoryValue,
+        outstandingSupplierAmount,
+        outstandingCustomerAmount,
+      },
+      chartData,
+    };
+  },
+
+  /**
+   * Calculates metrics for Manufacturing Reports.
+   */
+  async getManufacturingReports(filter: string) {
+    const today = new Date();
+    let startDate = new Date();
+
+    if (filter === "daily") {
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
+    } else if (filter === "weekly") {
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 84);
+    } else if (filter === "monthly") {
+      startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1);
+    } else {
+      startDate = new Date(today.getFullYear() - 5, 0, 1);
+    }
+
+    const expenses = await prisma.manufacturingExpense.findMany({
+      where: { expenseDate: { gte: startDate } },
+      include: { category: true }
+    });
+
+    const production = await prisma.productionEntry.findMany({
+      where: { productionDate: { gte: startDate } },
+      include: { product: true }
+    });
+
+    const getGroupKey = (date: Date): string => {
+      const d = new Date(date);
+      if (filter === "daily") {
+        return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+      } else if (filter === "weekly") {
+        const onejan = new Date(d.getFullYear(), 0, 1);
+        const weekNum = Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
+        return `Wk ${weekNum}-${d.getFullYear()}`;
+      } else if (filter === "monthly") {
+        return d.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+      } else {
+        return String(d.getFullYear());
+      }
+    };
+
+    const dataMap: Record<string, { label: string; expenses: number; boxes: number; pieces: number }> = {};
+
+    let runner = new Date(startDate);
+    const endRange = new Date();
+    while (runner <= endRange) {
+      const key = getGroupKey(runner);
+      dataMap[key] = { label: key, expenses: 0, boxes: 0, pieces: 0 };
+      if (filter === "daily") {
+        runner.setDate(runner.getDate() + 1);
+      } else if (filter === "weekly") {
+        runner.setDate(runner.getDate() + 7);
+      } else if (filter === "monthly") {
+        runner.setMonth(runner.getMonth() + 1);
+      } else {
+        runner.setFullYear(runner.getFullYear() + 1);
+      }
+    }
+
+    const finalKey = getGroupKey(endRange);
+    if (!dataMap[finalKey]) {
+      dataMap[finalKey] = { label: finalKey, expenses: 0, boxes: 0, pieces: 0 };
+    }
+
+    expenses.forEach((e) => {
+      const key = getGroupKey(e.expenseDate);
+      if (dataMap[key]) {
+        dataMap[key].expenses += Number(e.amount);
+      }
+    });
+
+    production.forEach((p) => {
+      const key = getGroupKey(p.productionDate);
+      if (dataMap[key]) {
+        dataMap[key].boxes += Number(p.boxesProduced);
+        dataMap[key].pieces += Number(p.totalPieces);
+      }
+    });
+
+    const chartData = Object.values(dataMap);
+
+    const catMap: Record<string, number> = {};
+    expenses.forEach((e) => {
+      const catName = e.category.name;
+      catMap[catName] = (catMap[catName] || 0) + Number(e.amount);
+    });
+    const expenseBreakdown = Object.entries(catMap).map(([name, value]) => ({ name, value }));
+
+    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const totalBoxesProduced = production.reduce((sum, p) => sum + Number(p.boxesProduced), 0);
+    const totalPiecesProduced = production.reduce((sum, p) => sum + Number(p.totalPieces), 0);
+
+    return {
+      summary: {
+        totalExpenses,
+        totalBoxesProduced,
+        totalPiecesProduced,
+      },
+      expenseBreakdown,
+      chartData,
     };
   },
 };

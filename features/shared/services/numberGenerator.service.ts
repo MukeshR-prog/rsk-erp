@@ -46,27 +46,22 @@ export const NumberGeneratorService = {
         break;
       }
       case "PRD": {
-        const last = await tx.productionBatch.findFirst({
-          where: { batchNumber: { startsWith: yearPrefix } },
-          orderBy: { batchNumber: "desc" },
-          select: { batchNumber: true },
+        const last = await tx.productionEntry.findFirst({
+          where: { productionNumber: { startsWith: yearPrefix } },
+          orderBy: { productionNumber: "desc" },
+          select: { productionNumber: true },
         });
-        lastNumber = last?.batchNumber || null;
+        lastNumber = last?.productionNumber || null;
         break;
       }
       case "EXP": {
-        // Since ProductionExpense doesn't store a sequential code field in the schema,
-        // we derive it dynamically from the count of batch expenses recorded in the current year.
-        const count = await tx.productionExpense.count({
-          where: {
-            createdAt: {
-              gte: new Date(currentYear, 0, 1),
-            },
-          },
+        const last = await tx.manufacturingExpense.findFirst({
+          where: { expenseNumber: { startsWith: yearPrefix } },
+          orderBy: { expenseNumber: "desc" },
+          select: { expenseNumber: true },
         });
-        const nextSeq = count + 1;
-        const nextSeqPadded = String(nextSeq).padStart(6, "0");
-        return `${yearPrefix}${nextSeqPadded}`;
+        lastNumber = last?.expenseNumber || null;
+        break;
       }
     }
 

@@ -113,6 +113,189 @@ export async function getContactDetails(id: string) {
       ? await LedgerService.getSupplierOutstanding(item.id, prisma)
       : await LedgerService.getCustomerOutstanding(item.id, prisma);
 
+    let purchases: any[] = [];
+    let sales: any[] = [];
+    let payments: any[] = [];
+    let products: any[] = [];
+    let recentTransactions: any[] = [];
+    let totalTransactionAmount = 0;
+    let totalPaid = 0;
+
+    if (item.type === "SUPPLIER") {
+      // Fetch Purchases
+      const dbPurchases = await prisma.purchase.findMany({
+        where: { supplierId: id },
+        include: {
+          items: {
+            include: { product: true }
+          }
+        },
+        orderBy: { purchaseDate: "desc" }
+      });
+      purchases = dbPurchases.map(p => ({
+        id: p.id,
+        number: p.purchaseNumber,
+        date: p.purchaseDate.toISOString(),
+        grandTotal: Number(p.grandTotal),
+        status: p.status,
+        paymentStatus: p.paymentStatus,
+        itemsCount: p.items.length
+      }));
+      totalTransactionAmount = dbPurchases
+        .filter(p => p.status === "COMPLETED")
+        .reduce((sum, p) => sum + Number(p.grandTotal), 0);
+
+      // Fetch Payments Made
+      const dbPayments = await prisma.payment.findMany({
+        where: { contactId: id, paymentType: "SUPPLIER_PAYMENT" },
+        orderBy: { paymentDate: "desc" }
+      });
+      payments = dbPayments.map(p => ({
+        id: p.id,
+        number: p.paymentNumber,
+        date: p.paymentDate.toISOString(),
+        amount: Number(p.amount),
+        method: p.paymentMethod,
+        status: p.status
+      }));
+      totalPaid = dbPayments
+        .filter(p => p.status === "COMPLETED")
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      // Unique Products Purchased
+      const prodMap = new Map<string, any>();
+      dbPurchases.forEach(p => {
+        p.items.forEach(line => {
+          if (!prodMap.has(line.productId)) {
+            prodMap.set(line.productId, {
+              id: line.product.id,
+              code: line.product.code,
+              name: line.product.name,
+              volumeMl: line.product.volumeMl,
+              color: line.product.color,
+              lastRate: Number(line.purchaseRate)
+            });
+          }
+        });
+      });
+      products = Array.from(prodMap.values());
+
+      // Recent Transactions Timeline
+      const txs: any[] = [];
+      dbPurchases.forEach(p => {
+        txs.push({
+          id: p.id,
+          type: "INVOICE",
+          number: p.purchaseNumber,
+          date: p.purchaseDate,
+          amount: Number(p.grandTotal),
+          status: p.status,
+          paymentStatus: p.paymentStatus,
+          description: `Purchase Invoice`
+        });
+      });
+      dbPayments.forEach(p => {
+        txs.push({
+          id: p.id,
+          type: "PAYMENT",
+          number: p.paymentNumber,
+          date: p.paymentDate,
+          amount: Number(p.amount),
+          status: p.status,
+          description: `Supplier Payment (${p.paymentMethod})`
+        });
+      });
+      txs.sort((a, b) => b.date.getTime() - a.date.getTime());
+      recentTransactions = txs.map(t => ({ ...t, date: t.date.toISOString() })).slice(0, 10);
+
+    } else {
+      // Fetch Sales
+      const dbSales = await prisma.sale.findMany({
+        where: { customerId: id },
+        include: {
+          items: {
+            include: { product: true }
+          }
+        },
+        orderBy: { saleDate: "desc" }
+      });
+      sales = dbSales.map(s => ({
+        id: s.id,
+        number: s.saleNumber,
+        date: s.saleDate.toISOString(),
+        grandTotal: Number(s.grandTotal),
+        status: s.status,
+        paymentStatus: s.paymentStatus,
+        itemsCount: s.items.length
+      }));
+      totalTransactionAmount = dbSales
+        .filter(s => s.status === "COMPLETED")
+        .reduce((sum, s) => sum + Number(s.grandTotal), 0);
+
+      // Fetch Payments Received
+      const dbPayments = await prisma.payment.findMany({
+        where: { contactId: id, paymentType: "CUSTOMER_RECEIPT" },
+        orderBy: { paymentDate: "desc" }
+      });
+      payments = dbPayments.map(p => ({
+        id: p.id,
+        number: p.paymentNumber,
+        date: p.paymentDate.toISOString(),
+        amount: Number(p.amount),
+        method: p.paymentMethod,
+        status: p.status
+      }));
+      totalPaid = dbPayments
+        .filter(p => p.status === "COMPLETED")
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      // Unique Products Sold
+      const prodMap = new Map<string, any>();
+      dbSales.forEach(s => {
+        s.items.forEach(line => {
+          if (!prodMap.has(line.productId)) {
+            prodMap.set(line.productId, {
+              id: line.product.id,
+              code: line.product.code,
+              name: line.product.name,
+              volumeMl: line.product.volumeMl,
+              color: line.product.color,
+              lastRate: Number(line.sellingRate)
+            });
+          }
+        });
+      });
+      products = Array.from(prodMap.values());
+
+      // Recent Transactions Timeline
+      const txs: any[] = [];
+      dbSales.forEach(s => {
+        txs.push({
+          id: s.id,
+          type: "INVOICE",
+          number: s.saleNumber,
+          date: s.saleDate,
+          amount: Number(s.grandTotal),
+          status: s.status,
+          paymentStatus: s.paymentStatus,
+          description: `Sales Invoice`
+        });
+      });
+      dbPayments.forEach(p => {
+        txs.push({
+          id: p.id,
+          type: "PAYMENT",
+          number: p.paymentNumber,
+          date: p.paymentDate,
+          amount: Number(p.amount),
+          status: p.status,
+          description: `Customer Receipt (${p.paymentMethod})`
+        });
+      });
+      txs.sort((a, b) => b.date.getTime() - a.date.getTime());
+      recentTransactions = txs.map(t => ({ ...t, date: t.date.toISOString() })).slice(0, 10);
+    }
+
     return {
       success: true,
       data: {
@@ -121,6 +304,16 @@ export async function getContactDetails(id: string) {
         outstandingBalance,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
+        purchases,
+        sales,
+        payments,
+        products,
+        recentTransactions,
+        totals: {
+          totalTransactionAmount,
+          totalPaid,
+          outstandingBalance
+        }
       },
     };
   } catch (error) {

@@ -22,6 +22,10 @@ export const productSchema = z.object({
   ),
   categoryId: z.string().optional().or(z.literal("")),
   unitId: z.string().optional().or(z.literal("")),
+  piecesPerBox: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
+    z.number().int().min(1, "Pieces per box must be at least 1").nullable().optional()
+  ),
 });
 
 export type ProductFormValues = z.infer<typeof productSchema>;
