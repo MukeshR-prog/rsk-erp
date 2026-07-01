@@ -179,7 +179,16 @@ export async function getProductsAction() {
       select: { id: true, name: true, code: true, sellingPrice: true, currentStock: true },
       orderBy: { name: "asc" },
     });
-    return { success: true, data };
+    return {
+      success: true,
+      data: data.map((p) => ({
+        id: p.id,
+        name: p.name,
+        code: p.code,
+        sellingPrice: p.sellingPrice ? Number(p.sellingPrice) : 0,
+        currentStock: p.currentStock ? Number(p.currentStock) : 0,
+      })),
+    };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to fetch products list." };
   }

@@ -491,8 +491,8 @@ export default function PurchasesPage() {
       {isCreateOpen && (
         <Modal isOpen={isCreateOpen} onOpenChange={(open) => { if (!open) handleCloseCreate(); }}>
           <ModalBackdrop />
-          <ModalContainer>
-            <ModalDialog className="max-w-4xl mx-4">
+          <ModalContainer placement="center" scroll="inside">
+            <ModalDialog className="max-w-4xl mx-4 max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
               <form onSubmit={handleSubmit(handleSave)}>
                 <ModalHeader className="pt-6 px-6 border-b border-slate-100 dark:border-slate-900">
                   <span className="text-lg font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
@@ -501,7 +501,7 @@ export default function PurchasesPage() {
                   </span>
                 </ModalHeader>
 
-                <ModalBody className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+                <ModalBody className="px-6 py-4 flex-1 min-h-0 overflow-y-auto">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4">
                     {/* Supplier Selector */}
                     <div className="md:col-span-2">
@@ -748,7 +748,7 @@ export default function PurchasesPage() {
                   </div>
                 </ModalBody>
 
-                <ModalFooter className="px-6 pb-6 pt-4 border-t border-slate-100 dark:border-slate-900 gap-3">
+                <ModalFooter className="px-6 pb-6 pt-4 border-t border-slate-100 dark:border-slate-900 gap-3 shrink-0">
                   <Button variant="ghost" onPress={handleCloseCreate} type="button">
                     Cancel
                   </Button>

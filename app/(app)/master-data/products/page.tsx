@@ -157,7 +157,7 @@ function ProductsPageContent() {
     loadProducts();
   };
 
-  const handleOpenForm = (product: ProductData | null = null, e?: any) => {
+  const handleOpenForm = (product: any | null = null, e?: any) => {
     if (e) e.stopPropagation();
     setEditingProduct(product);
     if (product) {
@@ -172,6 +172,7 @@ function ProductsPageContent() {
       setValue("minStockAlert", product.minStockAlert || null);
       setValue("categoryId", product.categoryId || "");
       setValue("unitId", product.unitId || "");
+      setValue("piecesPerBox", product.piecesPerBox || null);
     } else {
       reset({
         code: "",
@@ -185,6 +186,7 @@ function ProductsPageContent() {
         minStockAlert: null,
         categoryId: "",
         unitId: "",
+        piecesPerBox: null,
       });
     }
     setIsFormOpen(true);
@@ -632,7 +634,7 @@ function ProductsPageContent() {
                             type="text"
                             placeholder="e.g. 150ml"
                             {...register("volumeMl")}
-                            className={`flex h-10 w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-950 ${
+                            className={`flex h-10 w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-955 ${
                               errors.volumeMl ? "border-red-500" : "border-slate-200 dark:border-slate-800"
                             }`}
                           />
@@ -652,6 +654,21 @@ function ProductsPageContent() {
                             }`}
                           />
                           {renderError(errors.color)}
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
+                            Pieces per Box
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 1000"
+                            {...register("piecesPerBox", { valueAsNumber: true })}
+                            className={`flex h-10 w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-950 ${
+                              errors.piecesPerBox ? "border-red-500" : "border-slate-200 dark:border-slate-800"
+                            }`}
+                          />
+                          {renderError(errors.piecesPerBox)}
                         </div>
                       </>
                     )}

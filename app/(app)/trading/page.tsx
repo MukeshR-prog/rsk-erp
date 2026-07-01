@@ -10,14 +10,9 @@ import {
   TrendingUp,
   CreditCard,
   Users,
-  Package,
-  BookOpen,
-  BarChart3,
   ArrowRight,
   TrendingDown,
   Info,
-  Calendar,
-  DollarSign
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
@@ -25,45 +20,71 @@ import Link from "next/link";
 import { getTradingDashboardAction } from "@/features/shared/dashboard/actions";
 import dayjs from "dayjs";
 
+type TradingDashboardData = {
+  metrics: {
+    todayPurchases: number;
+    todayPayments: number;
+    supplierOutstanding: number;
+    currentStockValue: number;
+    todaySales: number;
+    todayCollections: number;
+    customerOutstanding: number;
+    lowStockCount: number;
+  };
+  recentPurchases: Array<{
+    id: string;
+    number: string;
+    supplierName: string;
+    date: string;
+    grandTotal: number;
+    paymentStatus: "PAID" | "PARTIALLY_PAID" | "UNPAID" | string;
+  }>;
+  recentPayments: Array<{
+    id: string;
+    number: string;
+    supplierName: string;
+    date: string;
+    amount: number;
+    status: "CANCELLED" | string;
+  }>;
+};
+
 export default function TradingDashboardPage() {
   const { setWorkspace } = useWorkspaceStore();
 
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<TradingDashboardData | null>(null);
 
   // Ensure workspace store matches routing context
   useEffect(() => {
     setWorkspace("trading");
   }, [setWorkspace]);
 
-  const loadDashboardData = async () => {
-    setLoading(true);
-    try {
+
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
       const res = await getTradingDashboardAction();
+
+      if (!active) {
+        return;
+      }
+
       if (res.success && res.data) {
-        setData(res.data);
+        setData(res.data as TradingDashboardData);
       } else {
         toast.error(res.error || "Failed to load dashboard data.");
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Error loading dashboard data.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    })();
 
-  useEffect(() => {
-    loadDashboardData();
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const handleShortcutClick = (actionName: string) => {
-    toast.success(`${actionName} module will be connected in the next phase!`);
-  };
-
-  if (loading || !data) {
+  if (!data) {
     return (
-      <div className="flex h-[400px] items-center justify-center text-slate-500 font-medium">
+      <div className="flex h-100 items-center justify-center text-slate-500 font-medium">
         Loading Trading Dashboard...
       </div>
     );
@@ -157,7 +178,7 @@ export default function TradingDashboardPage() {
                 className="h-20 w-full flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855"
               >
                 <TrendingDown className="w-5 h-5 text-slate-805 dark:text-slate-205" />
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 font-semibold">Supplier Payment</span>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Supplier Payment</span>
               </Button>
             </Link>
           </div>
@@ -167,7 +188,7 @@ export default function TradingDashboardPage() {
         <Card title="Workspace Metrics" subtitle="Active registers configuration">
           <div className="flex flex-col gap-3 mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
             <div className="flex gap-2.5 items-start">
-              <Info className="w-5.5 h-5.5 text-slate-900 dark:text-slate-50 flex-shrink-0" />
+              <Info className="w-5 h-5 text-slate-900 dark:text-slate-50 shrink-0" />
               <span>
                 These analytics are linked directly to your Supabase PostgreSQL registers. Double entries calculate outstandings on runtime.
               </span>
@@ -184,7 +205,7 @@ export default function TradingDashboardPage() {
             <div className="py-8 text-center text-xs text-slate-400">No purchase records registered yet.</div>
           ) : (
             <div className="flex flex-col gap-3.5">
-              {recentPurchases.map((p: any) => {
+              {recentPurchases.map((p) => {
                 let badgeClass = "";
                 if (p.paymentStatus === "PAID") badgeClass = "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400";
                 else if (p.paymentStatus === "PARTIALLY_PAID") badgeClass = "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400";
@@ -217,7 +238,7 @@ export default function TradingDashboardPage() {
             <div className="py-8 text-center text-xs text-slate-400">No transactions registered yet.</div>
           ) : (
             <div className="flex flex-col gap-3.5">
-              {recentPayments.map((p: any) => (
+              {recentPayments.map((p) => (
                 <div key={p.id} className="flex justify-between items-center p-3 rounded-xl border border-slate-100 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
                   <div className="flex flex-col gap-1 text-left">
                     <Link href={`/trading/payments/${p.id}`} className="font-mono font-bold text-sm text-slate-900 dark:text-white hover:underline">

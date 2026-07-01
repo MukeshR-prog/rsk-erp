@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
 model Profile {
@@ -59,17 +59,15 @@ model Product {
   hsnCode           String?
   gstRate           Decimal?             @db.Decimal(5, 2)
   isActive          Boolean              @default(true)
+  piecesPerBox      Int?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   categoryId        String?
   unitId            String?
-  bomItems          BOMItem[]
-  bomRecipes        BOMRecipe[]
   saleItems         SaleItem[]
   category          ProductCategory?     @relation(fields: [categoryId], references: [id])
   unit              Unit?                @relation(fields: [unitId], references: [id])
-  productionBatches ProductionBatch[]
-  consumedInBatches ProductionMaterial[]
+  productionEntries ProductionEntry[]
   purchaseItems     PurchaseItem[]
   stockMovements    StockMovement[]
 
@@ -98,39 +96,45 @@ model Unit {
 }
 
 model ExpenseCategory {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  isActive  Boolean  @default(true)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  productionExpenses ProductionExpense[]
+  id                    String                 @id @default(uuid())
+  name                  String                 @unique
+  isActive              Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  manufacturingExpenses ManufacturingExpense[]
 }
 
-model BOMRecipe {
-  id                 String            @id @default(uuid())
-  name               String            @unique
-  finishedProductId  String
-  wasteFactorPercent Decimal           @default(0.0) @db.Decimal(5, 2)
-  isActive           Boolean           @default(true)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  items              BOMItem[]
-  finishedProduct    Product           @relation(fields: [finishedProductId], references: [id])
-  productionBatches  ProductionBatch[]
+model ManufacturingExpense {
+  id            String          @id @default(uuid())
+  expenseNumber String          @unique
+  categoryId    String
+  description   String
+  amount        Decimal         @db.Decimal(12, 2)
+  notes         String?
+  expenseDate   DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  category      ExpenseCategory @relation(fields: [categoryId], references: [id])
 
-  @@index([finishedProductId])
+  @@index([categoryId])
+  @@index([expenseDate])
 }
 
-model BOMItem {
-  id         String    @id @default(uuid())
-  recipeId   String
-  materialId String
-  quantity   Decimal   @db.Decimal(12, 4)
-  material   Product   @relation(fields: [materialId], references: [id])
-  recipe     BOMRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+model ProductionEntry {
+  id               String   @id @default(uuid())
+  productionNumber String   @unique
+  productId        String
+  boxesProduced    Decimal  @db.Decimal(12, 2)
+  piecesPerBox     Int
+  totalPieces      Decimal  @db.Decimal(12, 2)
+  productionDate   DateTime @default(now())
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  product          Product  @relation(fields: [productId], references: [id])
 
-  @@unique([recipeId, materialId])
-  @@index([materialId])
+  @@index([productId])
+  @@index([productionDate])
 }
 
 model StockMovement {
@@ -211,57 +215,6 @@ model Payment {
   @@index([contactId])
   @@index([purchaseId])
   @@index([saleId])
-}
-
-model ProductionBatch {
-  id                String               @id @default(uuid())
-  batchNumber       String               @unique
-  recipeId          String
-  productId         String
-  quantityProduced  Decimal              @db.Decimal(12, 2)
-  batchDate         DateTime             @default(now())
-  totalMaterialCost Decimal              @default(0.0) @db.Decimal(12, 2)
-  totalBatchCost    Decimal              @default(0.0) @db.Decimal(12, 2)
-  unitCost          Decimal              @default(0.0) @db.Decimal(12, 2)
-  status            BatchStatus          @default(DRAFT)
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  product           Product              @relation(fields: [productId], references: [id])
-  recipe            BOMRecipe            @relation(fields: [recipeId], references: [id])
-  materialsConsumed ProductionMaterial[]
-  expenses          ProductionExpense[]
-
-  @@index([productId])
-  @@index([recipeId])
-  @@index([batchNumber])
-}
-
-model ProductionExpense {
-  id          String   @id @default(uuid())
-  batchId     String
-  categoryId  String
-  amount      Decimal  @db.Decimal(12, 2)
-  notes       String?
-  createdAt   DateTime @default(now())
-
-  batch        ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  category     ExpenseCategory @relation(fields: [categoryId], references: [id])
-
-  @@index([batchId])
-  @@index([categoryId])
-}
-
-model ProductionMaterial {
-  id               String          @id @default(uuid())
-  batchId          String
-  materialId       String
-  quantityConsumed Decimal         @db.Decimal(12, 4)
-  unitCost         Decimal         @db.Decimal(12, 2)
-  batch            ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  material         Product         @relation(fields: [materialId], references: [id])
-
-  @@index([batchId])
-  @@index([materialId])
 }
 
 model Purchase {

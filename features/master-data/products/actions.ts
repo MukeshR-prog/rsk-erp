@@ -87,14 +87,29 @@ export async function getProducts(params: {
     return {
       success: true,
       data: items.map((item) => ({
-        ...item,
+        id: item.id,
+        code: item.code,
+        name: item.name,
+        type: item.type,
+        description: item.description,
+        imageUrl: item.imageUrl,
+        volumeMl: item.volumeMl,
+        color: item.color,
         currentStock: Number(item.currentStock),
         averageCost: Number(item.averageCost),
         purchasePrice: item.purchasePrice ? Number(item.purchasePrice) : null,
         sellingPrice: item.sellingPrice ? Number(item.sellingPrice) : null,
         minStockAlert: item.minStockAlert ? Number(item.minStockAlert) : null,
+        hsnCode: item.hsnCode,
+        gstRate: item.gstRate ? Number(item.gstRate) : null,
+        isActive: item.isActive,
+        piecesPerBox: item.piecesPerBox,
+        categoryId: item.categoryId,
+        unitId: item.unitId,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
+        category: item.category ? { id: item.category.id, name: item.category.name } : null,
+        unit: item.unit ? { id: item.unit.id, name: item.unit.name } : null,
       })),
       meta: {
         total,
@@ -131,14 +146,29 @@ export async function getProductDetails(id: string) {
     return {
       success: true,
       data: {
-        ...item,
+        id: item.id,
+        code: item.code,
+        name: item.name,
+        type: item.type,
+        description: item.description,
+        imageUrl: item.imageUrl,
+        volumeMl: item.volumeMl,
+        color: item.color,
         currentStock: Number(item.currentStock),
         averageCost: Number(item.averageCost),
         purchasePrice: item.purchasePrice ? Number(item.purchasePrice) : null,
         sellingPrice: item.sellingPrice ? Number(item.sellingPrice) : null,
         minStockAlert: item.minStockAlert ? Number(item.minStockAlert) : null,
+        hsnCode: item.hsnCode,
+        gstRate: item.gstRate ? Number(item.gstRate) : null,
+        isActive: item.isActive,
+        piecesPerBox: item.piecesPerBox,
+        categoryId: item.categoryId,
+        unitId: item.unitId,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
+        category: item.category ? { id: item.category.id, name: item.category.name } : null,
+        unit: item.unit ? { id: item.unit.id, name: item.unit.name } : null,
       },
     };
   } catch (error) {
@@ -160,6 +190,7 @@ export async function createProduct(data: {
   minStockAlert?: number | null;
   categoryId?: string;
   unitId?: string;
+  piecesPerBox?: number | null;
 }) {
   try {
     const {
@@ -175,6 +206,7 @@ export async function createProduct(data: {
       minStockAlert,
       categoryId,
       unitId,
+      piecesPerBox,
     } = data;
 
     const payload = {
@@ -190,6 +222,7 @@ export async function createProduct(data: {
       minStockAlert: minStockAlert ?? null,
       categoryId: categoryId || null,
       unitId: unitId || null,
+      piecesPerBox: piecesPerBox ?? null,
     };
 
     const item = await prisma.product.create({
@@ -233,6 +266,7 @@ export async function updateProduct(id: string, data: {
   minStockAlert?: number | null;
   categoryId?: string;
   unitId?: string;
+  piecesPerBox?: number | null;
 }) {
   try {
     const {
@@ -248,6 +282,7 @@ export async function updateProduct(id: string, data: {
       minStockAlert,
       categoryId,
       unitId,
+      piecesPerBox,
     } = data;
 
     const payload = {
@@ -263,6 +298,7 @@ export async function updateProduct(id: string, data: {
       minStockAlert: minStockAlert ?? null,
       categoryId: categoryId || null,
       unitId: unitId || null,
+      piecesPerBox: piecesPerBox ?? null,
     };
 
     const item = await prisma.product.update({
@@ -307,6 +343,7 @@ export async function upsertProduct(data: {
   minStockAlert?: number | null;
   categoryId?: string;
   unitId?: string;
+  piecesPerBox?: number | null;
 }) {
   const { id, ...payload } = data;
   if (id) {

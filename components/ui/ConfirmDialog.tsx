@@ -38,8 +38,8 @@ export default function ConfirmDialog({
   return (
     <Modal isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <ModalBackdrop />
-      <ModalContainer>
-        <ModalDialog className="max-w-md mx-4">
+      <ModalContainer placement="center" scroll="inside">
+        <ModalDialog className="max-w-md mx-4 max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
           <ModalHeader className="flex gap-2 items-center pt-6 px-6">
             {isDanger && (
               <div className="p-2 bg-red-100 text-red-600 rounded-xl dark:bg-red-950/30 dark:text-red-400 flex-shrink-0">
@@ -50,12 +50,12 @@ export default function ConfirmDialog({
               {title}
             </span>
           </ModalHeader>
-          <ModalBody className="px-6 py-2">
+          <ModalBody className="px-6 py-2 flex-1 min-h-0 overflow-y-auto">
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
               {message}
             </p>
           </ModalBody>
-          <ModalFooter className="px-6 pb-6 pt-4 gap-3">
+          <ModalFooter className="px-6 pb-6 pt-4 gap-3 shrink-0">
             <Button
               variant="ghost"
               onPress={onClose}
