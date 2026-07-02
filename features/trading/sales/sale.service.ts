@@ -430,7 +430,23 @@ export const SaleService = {
     ]);
 
     return {
-      items,
+      items: items.map((item) => ({
+        id: item.id,
+        saleNumber: item.saleNumber,
+        customerId: item.customerId,
+        saleDate: item.saleDate,
+        reference: item.reference,
+        notes: item.notes,
+        discount: Number(item.discount),
+        transportCharges: Number(item.transportCharges),
+        subtotal: Number(item.subtotal),
+        grandTotal: Number(item.grandTotal),
+        status: item.status,
+        paymentStatus: item.paymentStatus,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        customer: item.customer,
+      })),
       total,
       pages: Math.ceil(total / limit),
       page,

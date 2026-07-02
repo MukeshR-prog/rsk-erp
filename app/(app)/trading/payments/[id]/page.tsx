@@ -8,8 +8,9 @@ import Card from "@/components/ui/Card";
 import PaymentStatusBadge from "@/components/erp/payments/PaymentStatusBadge";
 import { getSupplierPayment, cancelSupplierPaymentAction } from "@/features/trading/payments/actions";
 import dayjs from "dayjs";
-import { Button, TextField, Label, Input, Modal, ModalBackdrop, ModalContainer, ModalDialog, ModalHeader, ModalBody, ModalFooter } from "@heroui/react";
-import { ArrowLeft, Trash2, Calendar, FileText, Landmark, User } from "lucide-react";
+import { Button } from "@heroui/react";
+import { ArrowLeft, Trash2, Calendar, FileText, Landmark, User, X } from "lucide-react";
+
 import toast from "react-hot-toast";
 
 interface PaymentDetail {
@@ -327,62 +328,55 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
         </div>
       </div>
 
-      {/* Cancellation confirmation modal */}
-      <Modal isOpen={isCancelModalOpen} onOpenChange={(open) => { if (!open) setIsCancelModalOpen(false); }}>
-        <ModalBackdrop />
-        <ModalContainer placement="center" scroll="inside">
-          <ModalDialog className="bg-white dark:bg-slate-950 p-6 rounded-2xl max-w-md w-full text-left max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
-            <ModalHeader className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-850 pb-3 mb-4">
-              Cancel {isSupplier ? "Payment Voucher" : "Receipt Voucher"}
-            </ModalHeader>
-            <ModalBody className="flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                Are you sure you want to cancel {isSupplier ? "payment" : "receipt"} voucher{" "}
-                <strong className="text-slate-900 dark:text-white">
-                  {payment.paymentNumber}
-                </strong>{" "}
-                for ₹
-                {payment.amount.toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })}
-                ? This operation is irreversible and will restore the invoice balance due.
-              </p>
-
-              <TextField className="flex flex-col gap-1 w-full">
-                <Label className="text-sm font-semibold text-slate-700 dark:text-slate-350">
-                  Reason for Cancellation
-                </Label>
-                <Input
-                  placeholder="Enter why this is being cancelled"
-                  value={cancellationReason}
-                  onChange={(e) => setCancellationReason(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm"
-                />
-              </TextField>
-            </ModalBody>
-            <ModalFooter className="flex gap-3 justify-end mt-6 shrink-0">
-              <Button
-                variant="tertiary"
-                onPress={() => {
-                  setIsCancelModalOpen(false);
-                  setCancellationReason("");
-                }}
-                className="font-bold border border-slate-150 rounded-xl"
-              >
-                Keep Active
-              </Button>
-              <Button
-                variant="primary"
-                isPending={isPending}
-                onPress={handleCancelSubmit}
-                className="font-bold rounded-xl px-5 bg-red-600 hover:bg-red-700 text-white"
-              >
-                {isPending ? "Cancelling..." : "Cancel Voucher"}
-              </Button>
-            </ModalFooter>
-          </ModalDialog>
-        </ModalContainer>
-      </Modal>
+      {/* Cancellation Drawer */}
+      <div
+        className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+          isCancelModalOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <div
+          onClick={() => { setIsCancelModalOpen(false); setCancellationReason(""); }}
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+            isCancelModalOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          className={`relative w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col transform transition-transform duration-300 ease-out ${
+            isCancelModalOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-lg font-bold text-red-600">Cancel {isSupplier ? "Payment Voucher" : "Receipt Voucher"}</span>
+            <button type="button" onClick={() => { setIsCancelModalOpen(false); setCancellationReason(""); }} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4">
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+              Are you sure you want to cancel {isSupplier ? "payment" : "receipt"} voucher{" "}
+              <strong className="text-slate-900 dark:text-white">{payment.paymentNumber}</strong>{" "}
+              for ₹{payment.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}?
+              This operation is irreversible and will restore the invoice balance due.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-350">Reason for Cancellation *</label>
+              <input
+                type="text"
+                placeholder="Enter why this is being cancelled"
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 font-semibold"
+              />
+            </div>
+          </div>
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
+            <Button variant="ghost" onPress={() => { setIsCancelModalOpen(false); setCancellationReason(""); }}>Keep Active</Button>
+            <Button variant="primary" isPending={isPending} onPress={handleCancelSubmit} className="font-bold rounded-xl px-5 bg-red-600 hover:bg-red-700 border-none text-white">
+              {isPending ? "Cancelling..." : "Cancel Voucher"}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

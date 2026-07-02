@@ -16,14 +16,14 @@ import {
   Truck,
   ArrowRight,
   TrendingDown,
-  DollarSign
+  DollarSign,
+  X
 } from "lucide-react";
 import { Button } from "@heroui/react";
 
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { Modal, ModalBackdrop, ModalContainer, ModalDialog, ModalHeader, ModalBody, TextField, Label, Input, ModalFooter } from "@heroui/react";
 
 import { getPurchaseDetails, cancelPurchase } from "@/features/trading/purchases/actions";
 import { cancelSupplierPaymentAction } from "@/features/trading/payments/actions";
@@ -436,91 +436,100 @@ export default function PurchaseDetailsPage({ params }: PageProps) {
         />
       )}
 
-      {/* Record Payment Modal */}
-      {isPaymentModalOpen && (
-        <Modal isOpen={isPaymentModalOpen} onOpenChange={(open) => { if (!open) setIsPaymentModalOpen(false); }}>
-          <ModalBackdrop />
-          <ModalContainer>
-            <ModalDialog className="bg-white dark:bg-slate-950 p-6 rounded-2xl max-w-lg w-full text-left">
-              <ModalHeader className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-850 pb-3 mb-4">
-                Record Supplier Payment
-              </ModalHeader>
-              <ModalBody>
-                <PaymentForm
-                  contacts={[{ id: purchase.supplierId, name: purchase.supplierName, type: "SUPPLIER" }]}
-                  contactId={purchase.supplierId}
-                  purchaseId={purchase.id}
-                  prefilledBalance={purchase.remainingBalance}
-                  onSuccess={() => {
-                    setIsPaymentModalOpen(false);
-                    loadDetails();
-                  }}
-                  onCancel={() => setIsPaymentModalOpen(false)}
-                />
-              </ModalBody>
-            </ModalDialog>
-          </ModalContainer>
-        </Modal>
-      )}
+      {/* Record Payment Drawer */}
+      <div
+        className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+          isPaymentModalOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <div
+          onClick={() => setIsPaymentModalOpen(false)}
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+            isPaymentModalOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          className={`relative w-full max-w-lg h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col transform transition-transform duration-300 ease-out ${
+            isPaymentModalOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-lg font-bold text-slate-900 dark:text-slate-50">Record Supplier Payment</span>
+            <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            {isPaymentModalOpen && (
+              <PaymentForm
+                contacts={[{ id: purchase.supplierId, name: purchase.supplierName, type: "SUPPLIER" }]}
+                contactId={purchase.supplierId}
+                purchaseId={purchase.id}
+                prefilledBalance={purchase.remainingBalance}
+                onSuccess={() => {
+                  setIsPaymentModalOpen(false);
+                  loadDetails();
+                }}
+                onCancel={() => setIsPaymentModalOpen(false)}
+              />
+            )}
+          </div>
+        </div>
+      </div>
 
-      {/* Cancel Payment Modal */}
-      {cancellingPayment && (
-        <Modal isOpen={!!cancellingPayment} onOpenChange={(open) => { if (!open) setCancellingPayment(null); }}>
-          <ModalBackdrop />
-          <ModalContainer>
-            <ModalDialog className="bg-white dark:bg-slate-950 p-6 rounded-2xl max-w-md w-full text-left">
-              <ModalHeader className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-850 pb-3 mb-4">
-                Cancel Payment Receipt
-              </ModalHeader>
-              <ModalBody className="flex flex-col gap-4">
+      {/* Cancel Payment Drawer */}
+      <div
+        className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+          !!cancellingPayment ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <div
+          onClick={() => { setCancellingPayment(null); setCancellationReason(""); }}
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+            !!cancellingPayment ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          className={`relative w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col transform transition-transform duration-300 ease-out ${
+            !!cancellingPayment ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-lg font-bold text-red-600">Cancel Payment Receipt</span>
+            <button type="button" onClick={() => { setCancellingPayment(null); setCancellationReason(""); }} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4">
+            {cancellingPayment && (
+              <>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Are you sure you want to cancel payment receipt{" "}
-                  <strong className="text-slate-900 dark:text-white">
-                    {cancellingPayment.paymentNumber}
-                  </strong>{" "}
-                  for ₹
-                  {cancellingPayment.amount.toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })}
-                  ? This will restore the bill outstanding balance due.
+                  <strong className="text-slate-900 dark:text-white">{cancellingPayment.paymentNumber}</strong>{" "}
+                  for ₹{cancellingPayment.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}?
+                  This will restore the bill outstanding balance due.
                 </p>
-
-                <TextField className="flex flex-col gap-1 w-full">
-                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-350">
-                    Reason for Cancellation
-                  </Label>
-                  <Input
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-350">Reason for Cancellation *</label>
+                  <input
+                    type="text"
                     placeholder="Enter why this payment is being cancelled"
                     value={cancellationReason}
                     onChange={(e) => setCancellationReason(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm"
+                    className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 font-semibold"
                   />
-                </TextField>
-              </ModalBody>
-              <ModalFooter className="flex gap-3 justify-end mt-6">
-                <Button
-                  variant="tertiary"
-                  onPress={() => {
-                    setCancellingPayment(null);
-                    setCancellationReason("");
-                  }}
-                  className="font-bold border border-slate-150 rounded-xl"
-                >
-                  Keep Active
-                </Button>
-                <Button
-                  variant="primary"
-                  isPending={isPending}
-                  onPress={handleCancelPaymentSubmit}
-                  className="font-bold rounded-xl px-5 bg-red-600 hover:bg-red-700 text-white"
-                >
-                  {isPending ? "Cancelling..." : "Cancel Payment"}
-                </Button>
-              </ModalFooter>
-            </ModalDialog>
-          </ModalContainer>
-        </Modal>
-      )}
+                </div>
+              </>
+            )}
+          </div>
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
+            <Button variant="ghost" onPress={() => { setCancellingPayment(null); setCancellationReason(""); }}>Keep Active</Button>
+            <Button variant="primary" isPending={isPending} onPress={handleCancelPaymentSubmit} className="font-bold rounded-xl px-5 bg-red-600 hover:bg-red-700 border-none text-white">
+              {isPending ? "Cancelling..." : "Cancel Payment"}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

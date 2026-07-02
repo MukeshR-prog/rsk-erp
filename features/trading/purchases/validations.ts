@@ -18,6 +18,7 @@ export const purchaseSchema = z.object({
   discount: z.number().min(0, "Discount must be non-negative").default(0),
   transportCharges: z.number().min(0, "Transport charges must be non-negative").default(0),
   status: z.enum(["DRAFT", "COMPLETED", "CANCELLED"]).default("COMPLETED"),
+  initialAmountPaid: z.number().min(0).optional().default(0),
   items: z
     .array(purchaseItemSchema)
     .min(1, "At least one product item must be added")

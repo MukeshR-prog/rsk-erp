@@ -410,6 +410,35 @@ export const PurchaseService = {
       }
     }
 
+    // 7. Record initial payment if provided
+    const initialPaid = data.initialAmountPaid || 0;
+    if (initialPaid > 0 && data.status === "COMPLETED") {
+      const paymentNumber = await NumberGeneratorService.generateNumber("PAY", tx);
+      await tx.payment.create({
+        data: {
+          paymentNumber,
+          contactId: data.supplierId,
+          purchaseId: purchase.id,
+          amount: new Prisma.Decimal(initialPaid),
+          paymentDate: data.purchaseDate,
+          paymentMethod: "CASH",
+          paymentType: "SUPPLIER_PAYMENT",
+          notes: "Initial payment recorded at invoice creation",
+          status: "COMPLETED",
+        },
+      });
+
+      // Update payment status
+      const grandTotalNum = Number(grandTotal);
+      const newPaymentStatus: PurchasePaymentStatus =
+        initialPaid >= grandTotalNum ? "PAID" : "PARTIALLY_PAID";
+      await tx.purchase.update({
+        where: { id: purchase.id },
+        data: { paymentStatus: newPaymentStatus },
+      });
+    }
+
+
     return purchase;
   },
 
