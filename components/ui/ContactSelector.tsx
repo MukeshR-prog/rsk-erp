@@ -18,6 +18,7 @@ interface ContactSelectorProps {
   isInvalid?: boolean;
   errorMessage?: string;
   className?: string;
+  isCreatable?: boolean;
 }
 
 export default function ContactSelector({
@@ -29,6 +30,7 @@ export default function ContactSelector({
   isInvalid = false,
   errorMessage,
   className = "",
+  isCreatable = false,
 }: ContactSelectorProps) {
   const options: DropdownOption[] = contacts.map((c) => ({
     id: c.id,
@@ -47,6 +49,7 @@ export default function ContactSelector({
       errorMessage={errorMessage}
       className={className}
       isClearable={true}
+      isCreatable={isCreatable}
     />
   );
 }

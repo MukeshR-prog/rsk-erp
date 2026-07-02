@@ -20,7 +20,7 @@ import {
   Label,
   Input,
 } from "@heroui/react";
-import { Search, Plus, CreditCard, Calendar, RefreshCcw } from "lucide-react";
+import { Search, Plus, CreditCard, Calendar, RefreshCcw, X } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   getSupplierPayments,
@@ -436,24 +436,52 @@ function PaymentsPageContent() {
       </Card>
 
       {/* Record Payment/Receipt Modal */}
-      <Modal isOpen={isNewModalOpen} onOpenChange={(open) => { if (!open) setIsNewModalOpen(false); }}>
-        <ModalBackdrop />
-        <ModalContainer>
-          <ModalDialog className="bg-white dark:bg-slate-950 p-6 rounded-2xl max-w-lg w-full">
-            <ModalHeader className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-850 pb-3 mb-4">
-              {mode === "SUPPLIER" ? "Record Supplier Payment" : "Record Customer Receipt"}
-            </ModalHeader>
-            <ModalBody>
+      <div
+        className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+          isNewModalOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        {/* Backdrop overlay */}
+        <div
+          onClick={() => setIsNewModalOpen(false)}
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+            isNewModalOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
+        {/* Drawer container */}
+        <div
+          className={`relative w-full max-w-lg h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col justify-between transform transition-transform duration-300 ease-out ${
+            isNewModalOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="h-full flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-lg font-bold text-slate-900 dark:text-white">
+                {mode === "SUPPLIER" ? "Record Supplier Payment" : "Record Customer Receipt"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsNewModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-6">
               <PaymentForm
                 mode={mode}
                 contacts={contacts}
                 onSuccess={handleCreateSuccess}
                 onCancel={() => setIsNewModalOpen(false)}
               />
-            </ModalBody>
-          </ModalDialog>
-        </ModalContainer>
-      </Modal>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Cancel Transaction dialog */}
       {cancellingPayment && (
