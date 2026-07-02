@@ -47,10 +47,29 @@ export async function getSalesAction(filters: SaleFilters) {
  */
 export async function getSaleDetailsAction(id: string) {
   try {
-    const data = await SaleService.getSale(id, prisma);
-    if (!data) {
+    const raw = await SaleService.getSale(id, prisma);
+    if (!raw) {
       return { success: false, error: "Sale invoice record not found." };
     }
+    // Serialize all Decimal values to plain JS numbers
+    const data = {
+      ...raw,
+      discount: Number(raw.discount),
+      transportCharges: Number(raw.transportCharges),
+      subtotal: Number(raw.subtotal),
+      grandTotal: Number(raw.grandTotal),
+      items: (raw.items || []).map((item: any) => ({
+        ...item,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice ?? 0),
+        discount: Number(item.discount ?? 0),
+        lineTotal: Number(item.lineTotal ?? 0),
+      })),
+      payments: (raw.payments || []).map((p: any) => ({
+        ...p,
+        amount: Number(p.amount),
+      })),
+    };
     return {
       success: true,
       data,
@@ -176,7 +195,7 @@ export async function getProductsAction() {
   try {
     const data = await prisma.product.findMany({
       where: { isActive: true },
-      select: { id: true, name: true, code: true, sellingPrice: true, currentStock: true },
+      select: { id: true, name: true, code: true, sellingPrice: true, currentStock: true, type: true },
       orderBy: { name: "asc" },
     });
     return {
@@ -185,6 +204,7 @@ export async function getProductsAction() {
         id: p.id,
         name: p.name,
         code: p.code,
+        type: p.type,
         sellingPrice: p.sellingPrice ? Number(p.sellingPrice) : 0,
         currentStock: p.currentStock ? Number(p.currentStock) : 0,
       })),

@@ -7,20 +7,9 @@ import Card from "@/components/ui/Card";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import {
   Button,
-  Modal,
-  ModalBackdrop,
-  ModalContainer,
-  ModalDialog,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Tab,
-  Tabs,
-  TextField,
-  Label,
-  Input,
 } from "@heroui/react";
 import { Search, Plus, CreditCard, Calendar, RefreshCcw, X } from "lucide-react";
+
 import toast from "react-hot-toast";
 import {
   getSupplierPayments,
@@ -221,17 +210,24 @@ function PaymentsPageContent() {
         }
       />
 
-      {/* Main Tab Switcher */}
+      {/* Main Tab Switcher - custom button group */}
       <div className="border-b border-slate-200 dark:border-slate-800">
-        <Tabs
-          selectedKey={mode}
-          onSelectionChange={(key) => setMode(key as any)}
-          aria-label="Payment Mode Tabs"
-          className="w-full"
-        >
-          <Tab key="SUPPLIER">Supplier Payments</Tab>
-          <Tab key="CUSTOMER">Customer Receipts</Tab>
-        </Tabs>
+        <div className="flex">
+          {(["SUPPLIER", "CUSTOMER"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setMode(key)}
+              className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${
+                mode === key
+                  ? "border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100"
+                  : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
+              }`}
+            >
+              {key === "SUPPLIER" ? "Supplier Payments" : "Customer Receipts"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* KPI Widgets */}
@@ -284,18 +280,18 @@ function PaymentsPageContent() {
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
             {/* Search */}
             <div className="sm:col-span-2">
-              <TextField className="flex flex-col gap-1 w-full">
-                <Label className="text-xs font-semibold text-slate-500 uppercase">Search</Label>
+              <div className="flex flex-col gap-1 w-full">
+                <label className="text-xs font-semibold text-slate-500 uppercase">Search</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                  <Input
+                  <input
                     placeholder={mode === "SUPPLIER" ? "Search payment number, ref #, or supplier..." : "Search receipt number, ref #, or customer..."}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm animate-none"
                   />
                 </div>
-              </TextField>
+              </div>
             </div>
 
             {/* Selector */}
@@ -333,26 +329,26 @@ function PaymentsPageContent() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             {/* Start Date */}
-            <TextField className="flex flex-col gap-1 w-full">
-              <Label className="text-xs font-semibold text-slate-500 uppercase">From Date</Label>
-              <Input
+            <div className="flex flex-col gap-1 w-full">
+              <label className="text-xs font-semibold text-slate-500 uppercase">From Date</label>
+              <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm h-10"
               />
-            </TextField>
+            </div>
 
             {/* End Date */}
-            <TextField className="flex flex-col gap-1 w-full">
-              <Label className="text-xs font-semibold text-slate-500 uppercase">To Date</Label>
-              <Input
+            <div className="flex flex-col gap-1 w-full">
+              <label className="text-xs font-semibold text-slate-500 uppercase">To Date</label>
+              <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm h-10"
               />
-            </TextField>
+            </div>
 
             {/* Reset / Actions */}
             <div className="flex gap-2">
@@ -376,15 +372,22 @@ function PaymentsPageContent() {
 
           {/* Status Tabs */}
           <div className="border-b border-slate-100 dark:border-slate-850 mt-2">
-            <Tabs
-              selectedKey={statusTab}
-              onSelectionChange={(key) => setStatusTab(key as any)}
-              aria-label="Payment Status Filters"
-            >
-              <Tab key="ALL">All Records</Tab>
-              <Tab key="COMPLETED">Completed</Tab>
-              <Tab key="CANCELLED">Cancelled</Tab>
-            </Tabs>
+          <div className="flex">
+            {(["ALL", "COMPLETED", "CANCELLED"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setStatusTab(key)}
+                className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
+                  statusTab === key
+                    ? "border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100"
+                    : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                }`}
+              >
+                {key === "ALL" ? "All Records" : key === "COMPLETED" ? "Completed" : "Cancelled"}
+              </button>
+            ))}
+          </div>
           </div>
 
           {/* Table list */}
@@ -483,64 +486,59 @@ function PaymentsPageContent() {
         </div>
       </div>
 
-      {/* Cancel Transaction dialog */}
-      {cancellingPayment && (
-        <Modal isOpen={!!cancellingPayment} onOpenChange={(open) => { if (!open) setCancellingPayment(null); }}>
-          <ModalBackdrop />
-          <ModalContainer>
-            <ModalDialog className="bg-white dark:bg-slate-950 p-6 rounded-2xl max-w-md w-full text-left">
-              <ModalHeader className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-850 pb-3 mb-4">
-                Cancel Voucher
-              </ModalHeader>
-              <ModalBody className="flex flex-col gap-4">
+      {/* Cancel Transaction Drawer */}
+      <div
+        className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+          !!cancellingPayment ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <div
+          onClick={() => { setCancellingPayment(null); setCancellationReason(""); }}
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+            !!cancellingPayment ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          className={`relative w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col transform transition-transform duration-300 ease-out ${
+            !!cancellingPayment ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-lg font-bold text-red-600">Cancel Voucher</span>
+            <button type="button" onClick={() => { setCancellingPayment(null); setCancellationReason(""); }} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4">
+            {cancellingPayment && (
+              <>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Are you sure you want to cancel voucher{" "}
-                  <strong className="text-slate-900 dark:text-white">
-                    {cancellingPayment.paymentNumber}
-                  </strong>{" "}
-                  for ₹
-                  {cancellingPayment.amount.toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })}
-                  ? This will increase the remaining unpaid balance of the invoice.
+                  <strong className="text-slate-900 dark:text-white">{cancellingPayment.paymentNumber}</strong>{" "}
+                  for ₹{cancellingPayment.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}?
+                  This will increase the remaining unpaid balance of the invoice.
                 </p>
-
-                <TextField className="flex flex-col gap-1 w-full">
-                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-350">
-                    Reason for Cancellation
-                  </Label>
-                  <Input
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-350">Reason for Cancellation *</label>
+                  <input
+                    type="text"
                     placeholder="Enter why this is being cancelled"
                     value={cancellationReason}
                     onChange={(e) => setCancellationReason(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm animate-none"
+                    className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 font-semibold"
                   />
-                </TextField>
-              </ModalBody>
-              <ModalFooter className="flex gap-3 justify-end mt-6">
-                <Button
-                  variant="tertiary"
-                  onPress={() => {
-                    setCancellingPayment(null);
-                    setCancellationReason("");
-                  }}
-                  className="font-bold border border-slate-150 rounded-xl"
-                >
-                  Keep Active
-                </Button>
-                <Button
-                  variant="primary"
-                  isPending={isPending}
-                  onPress={handleCancelPaymentSubmit}
-                  className="font-bold rounded-xl px-5 bg-red-600 hover:bg-red-700 text-white"
-                >
-                  {isPending ? "Cancelling..." : "Cancel Voucher"}
-                </Button>
-              </ModalFooter>
-            </ModalDialog>
-          </ModalContainer>
-        </Modal>
-      )}
+                </div>
+              </>
+            )}
+          </div>
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
+            <Button variant="ghost" onPress={() => { setCancellingPayment(null); setCancellationReason(""); }}>Keep Active</Button>
+            <Button variant="primary" isPending={isPending} onPress={handleCancelPaymentSubmit} className="font-bold rounded-xl px-5 bg-red-600 hover:bg-red-700 border-none text-white">
+              {isPending ? "Cancelling..." : "Cancel Voucher"}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

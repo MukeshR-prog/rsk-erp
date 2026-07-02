@@ -102,6 +102,7 @@ export default function PurchasesPage() {
       notes: "",
       discount: 0,
       transportCharges: 0,
+      initialAmountPaid: 0,
       status: "COMPLETED",
       items: [],
     },
@@ -188,6 +189,7 @@ export default function PurchasesPage() {
       notes: "",
       discount: 0,
       transportCharges: 0,
+      initialAmountPaid: 0,
       status: "COMPLETED",
       items: [],
     });
@@ -709,6 +711,85 @@ export default function PurchasesPage() {
                             </div>
                           </div>
 
+                          {/* Quantity helper: Boxes × Pockets × Pieces per Pocket */}
+                          <details className="group">
+                            <summary className="text-[10px] font-bold text-blue-600 cursor-pointer select-none list-none flex items-center gap-1 mt-1">
+                              <span className="group-open:rotate-90 transition-transform inline-block">▶</span>
+                              Calculate quantity from boxes/pockets (optional)
+                            </summary>
+                            <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-100 dark:border-blue-900">
+                              <p className="text-[10px] text-blue-600 mb-2 font-medium">Fill boxes, pockets and pieces per pocket — quantity will be calculated automatically. Or enter a direct total amount instead.</p>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[10px] font-bold text-slate-600">Boxes</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    className="h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none focus:border-blue-500"
+                                    onChange={(e) => {
+                                      const boxes = Number(e.target.value) || 0;
+                                      const pockets = Number((document.getElementById(`pockets-${index}`) as HTMLInputElement)?.value) || 0;
+                                      const ppp = Number((document.getElementById(`ppp-${index}`) as HTMLInputElement)?.value) || 0;
+                                      const total = boxes * pockets * ppp;
+                                      if (total > 0) setValue(`items.${index}.quantity`, total);
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[10px] font-bold text-slate-600">Pockets/Box</label>
+                                  <input
+                                    id={`pockets-${index}`}
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    className="h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none focus:border-blue-500"
+                                    onChange={(e) => {
+                                      const pockets = Number(e.target.value) || 0;
+                                      const boxes = Number((e.target.closest(".grid")?.children[0]?.querySelector("input") as HTMLInputElement)?.value) || 0;
+                                      const ppp = Number((document.getElementById(`ppp-${index}`) as HTMLInputElement)?.value) || 0;
+                                      const total = boxes * pockets * ppp;
+                                      if (total > 0) setValue(`items.${index}.quantity`, total);
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[10px] font-bold text-slate-600">Pcs/Pocket</label>
+                                  <input
+                                    id={`ppp-${index}`}
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    className="h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none focus:border-blue-500"
+                                    onChange={(e) => {
+                                      const ppp = Number(e.target.value) || 0;
+                                      const pockets = Number((document.getElementById(`pockets-${index}`) as HTMLInputElement)?.value) || 0;
+                                      const boxes = Number((e.target.closest(".grid")?.children[0]?.querySelector("input") as HTMLInputElement)?.value) || 0;
+                                      const total = boxes * pockets * ppp;
+                                      if (total > 0) setValue(`items.${index}.quantity`, total);
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[10px] font-bold text-slate-600">Direct Total (₹)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="Quick total"
+                                    className="h-8 w-full rounded-lg border border-blue-200 bg-blue-50 px-2 text-xs outline-none focus:border-blue-600 text-blue-800 font-semibold"
+                                    onChange={(e) => {
+                                      const total = Number(e.target.value);
+                                      if (total > 0) {
+                                        const qty = Number(watch(`items.${index}.quantity`)) || 1;
+                                        setValue(`items.${index}.purchaseRate`, parseFloat((total / qty).toFixed(4)));
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </details>
+
                           <div className="flex flex-col gap-1.5">
                             <label className="text-[10px] font-bold text-slate-700 dark:text-slate-355 uppercase tracking-wider">
                               Remarks (Optional)
@@ -774,6 +855,18 @@ export default function PurchasesPage() {
                     <span className="text-lg font-black text-slate-900 dark:text-slate-50">
                       ₹{grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                     </span>
+                  </div>
+
+                  {/* Initial Payment */}
+                  <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
+                    <PriceInput
+                      label="Initial Amount Paid (Optional)"
+                      placeholder="0.00"
+                      {...register("initialAmountPaid", { valueAsNumber: true })}
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      If you paid a portion upfront, enter it here. A payment record will be auto-created.
+                    </p>
                   </div>
                 </div>
               </div>

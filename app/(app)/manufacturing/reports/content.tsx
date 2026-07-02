@@ -79,16 +79,27 @@ export default function ReportsPageContent() {
       />
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <Tabs
-          selectedKey={activeTab}
-          onSelectionChange={(key) => setActiveTab(key as any)}
-          aria-label="Report Timeframes"
-        >
-          <Tab key="daily">Daily View (30 Days)</Tab>
-          <Tab key="weekly">Weekly View (12 Weeks)</Tab>
-          <Tab key="monthly">Monthly View (12 Months)</Tab>
-          <Tab key="yearly">Yearly View (5 Years)</Tab>
-        </Tabs>
+        <div className="flex flex-wrap gap-2 p-1 bg-slate-100 dark:bg-slate-955 rounded-xl border border-slate-205 dark:border-slate-800">
+          {[
+            { key: "daily", label: "Daily View (30 Days)" },
+            { key: "weekly", label: "Weekly View (12 Weeks)" },
+            { key: "monthly", label: "Monthly View (12 Months)" },
+            { key: "yearly", label: "Yearly View (5 Years)" },
+          ].map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setActiveTab(t.key as any)}
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 ${
+                activeTab === t.key
+                  ? "bg-slate-900 text-white dark:bg-slate-55 dark:text-slate-950 shadow-sm font-black"
+                  : "text-slate-655 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isPending || !reportData ? (

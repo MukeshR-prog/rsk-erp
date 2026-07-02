@@ -311,14 +311,14 @@ export const SaleForm: React.FC<SaleFormProps> = ({
                           />
 
                           <PriceInput
-                            label="Selling Rate (₹) *"
+                            label="Selling Rate (\u20b9) *"
                             placeholder="e.g. 5.50"
                             error={(errors.items as any)?.[index]?.sellingRate}
                             {...register(`items.${index}.sellingRate` as any, { valueAsNumber: true })}
                           />
 
                           <PriceInput
-                            label="Line Discount (₹)"
+                            label="Line Discount (\u20b9)"
                             placeholder="e.g. 0.00"
                             error={(errors.items as any)?.[index]?.discount}
                             {...register(`items.${index}.discount` as any, { valueAsNumber: true })}
@@ -329,10 +329,89 @@ export const SaleForm: React.FC<SaleFormProps> = ({
                               Line Total
                             </span>
                             <span className="text-sm font-black text-slate-900 dark:text-white">
-                              ₹{lineTotalVal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              \u20b9{lineTotalVal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                             </span>
                           </div>
                         </div>
+
+                        {/* Quantity helper: Boxes × Pockets × Pieces per Pocket */}
+                        <details className="group">
+                          <summary className="text-[10px] font-bold text-blue-600 cursor-pointer select-none list-none flex items-center gap-1 mt-1">
+                            <span className="group-open:rotate-90 transition-transform inline-block">&#9654;</span>
+                            Calculate quantity from boxes/pockets (optional)
+                          </summary>
+                          <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-100 dark:border-blue-900">
+                            <p className="text-[10px] text-blue-600 mb-2 font-medium">Fill boxes, pockets and pieces per pocket — quantity will be calculated automatically. Or enter a direct total amount instead.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-600">Boxes</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="0"
+                                  className="h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none focus:border-blue-500"
+                                  onChange={(e) => {
+                                    const boxes = Number(e.target.value) || 0;
+                                    const pockets = Number((document.getElementById(`s-pockets-${index}`) as HTMLInputElement)?.value) || 0;
+                                    const ppp = Number((document.getElementById(`s-ppp-${index}`) as HTMLInputElement)?.value) || 0;
+                                    const total = boxes * pockets * ppp;
+                                    if (total > 0) setValue(`items.${index}.quantity` as any, total);
+                                  }}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-600">Pockets/Box</label>
+                                <input
+                                  id={`s-pockets-${index}`}
+                                  type="number"
+                                  min="0"
+                                  placeholder="0"
+                                  className="h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none focus:border-blue-500"
+                                  onChange={(e) => {
+                                    const pockets = Number(e.target.value) || 0;
+                                    const boxes = Number((e.target.closest(".grid")?.children[0]?.querySelector("input") as HTMLInputElement)?.value) || 0;
+                                    const ppp = Number((document.getElementById(`s-ppp-${index}`) as HTMLInputElement)?.value) || 0;
+                                    const total = boxes * pockets * ppp;
+                                    if (total > 0) setValue(`items.${index}.quantity` as any, total);
+                                  }}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-600">Pcs/Pocket</label>
+                                <input
+                                  id={`s-ppp-${index}`}
+                                  type="number"
+                                  min="0"
+                                  placeholder="0"
+                                  className="h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none focus:border-blue-500"
+                                  onChange={(e) => {
+                                    const ppp = Number(e.target.value) || 0;
+                                    const pockets = Number((document.getElementById(`s-pockets-${index}`) as HTMLInputElement)?.value) || 0;
+                                    const boxes = Number((e.target.closest(".grid")?.children[0]?.querySelector("input") as HTMLInputElement)?.value) || 0;
+                                    const total = boxes * pockets * ppp;
+                                    if (total > 0) setValue(`items.${index}.quantity` as any, total);
+                                  }}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-600">Direct Total (\u20b9)</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="Quick total"
+                                  className="h-8 w-full rounded-lg border border-blue-200 bg-blue-50 px-2 text-xs outline-none focus:border-blue-600 text-blue-800 font-semibold"
+                                  onChange={(e) => {
+                                    const total = Number(e.target.value);
+                                    if (total > 0) {
+                                      const qty = Number(watch(`items.${index}.quantity` as any)) || 1;
+                                      setValue(`items.${index}.sellingRate` as any, parseFloat((total / qty).toFixed(4)));
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </details>
 
                         <div className="flex flex-col gap-1">
                           <label className="text-[10px] font-bold text-slate-700 dark:text-slate-355 uppercase tracking-wider">
@@ -345,6 +424,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({
                             className="flex h-9 w-full rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs outline-none focus:border-slate-909 dark:border-slate-800 dark:bg-slate-955 dark:text-white font-medium"
                           />
                         </div>
+
                       </div>
                     );
                   })}

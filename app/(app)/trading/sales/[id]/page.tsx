@@ -14,21 +14,14 @@ import {
   CheckCircle,
   Truck,
   TrendingDown,
+  X,
 } from "lucide-react";
 import { Button } from "@heroui/react";
 
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import {
-  Modal,
-  ModalBackdrop,
-  ModalContainer,
-  ModalDialog,
-  ModalHeader,
-  ModalBody,
-  ModalFooter
-} from "@heroui/react";
+
 
 import {
   getSaleDetailsAction,
@@ -419,59 +412,81 @@ export default function SaleDetailsPage({ params }: PageProps) {
         title="Revise Sale Invoice"
       />
 
-      {/* Record Customer Receipt Modal */}
-      {isReceiptModalOpen && (
-        <Modal isOpen={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
-          <ModalBackdrop className="bg-slate-950/80 backdrop-blur-sm" />
-          <ModalContainer>
-            <ModalDialog className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg p-6">
-              <ModalHeader className="pb-3 border-b border-slate-100 dark:border-slate-850">
-                <span className="text-slate-900 dark:text-white font-bold text-lg">
-                  Record Customer Payment Receipt
-                </span>
-              </ModalHeader>
-              <ModalBody className="pt-4">
-                <PaymentForm
-                  mode="CUSTOMER"
-                  saleId={sale.id}
-                  contactId={sale.customerId}
-                  contacts={customers}
-                  prefilledBalance={dueAmount}
-                  onSuccess={() => {
-                    setIsReceiptModalOpen(false);
-                    loadDetails();
-                  }}
-                  onCancel={() => setIsReceiptModalOpen(false)}
-                />
-              </ModalBody>
-            </ModalDialog>
-          </ModalContainer>
-        </Modal>
-      )}
+      {/* Record Customer Receipt Drawer */}
+      <div
+        className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+          isReceiptModalOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <div
+          onClick={() => setIsReceiptModalOpen(false)}
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+            isReceiptModalOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          className={`relative w-full max-w-lg h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col transform transition-transform duration-300 ease-out ${
+            isReceiptModalOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-lg font-bold text-slate-900 dark:text-slate-50">Record Customer Payment Receipt</span>
+            <button type="button" onClick={() => setIsReceiptModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            {isReceiptModalOpen && (
+              <PaymentForm
+                mode="CUSTOMER"
+                saleId={sale.id}
+                contactId={sale.customerId}
+                contacts={customers}
+                prefilledBalance={dueAmount}
+                onSuccess={() => {
+                  setIsReceiptModalOpen(false);
+                  loadDetails();
+                }}
+                onCancel={() => setIsReceiptModalOpen(false)}
+              />
+            )}
+          </div>
+        </div>
+      </div>
 
-      {/* Cancel Payment Receipt Modal */}
-      {cancellingReceipt && (
-        <Modal isOpen={!!cancellingReceipt} onOpenChange={() => setCancellingReceipt(null)}>
-          <ModalBackdrop className="bg-slate-950/80 backdrop-blur-sm" />
-          <ModalContainer>
-            <ModalDialog className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6">
-              <ModalHeader className="pb-3 border-b border-slate-100 dark:border-slate-850">
-                <span className="text-slate-900 dark:text-white font-bold text-lg text-rose-500">
-                  Cancel Payment Receipt
-                </span>
-              </ModalHeader>
-              <ModalBody className="pt-4 flex flex-col gap-3">
+      {/* Cancel Payment Receipt Drawer */}
+      <div
+        className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+          !!cancellingReceipt ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <div
+          onClick={() => setCancellingReceipt(null)}
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+            !!cancellingReceipt ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          className={`relative w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col transform transition-transform duration-300 ease-out ${
+            !!cancellingReceipt ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-lg font-bold text-rose-600">Cancel Payment Receipt</span>
+            <button type="button" onClick={() => setCancellingReceipt(null)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4">
+            {cancellingReceipt && (
+              <>
                 <p className="text-sm text-slate-500 leading-normal">
                   Specify the reason for cancelling receipt transaction{" "}
-                  <strong className="text-slate-800 dark:text-slate-200">
-                    {cancellingReceipt.paymentNumber}
-                  </strong>{" "}
+                  <strong className="text-slate-800 dark:text-slate-200">{cancellingReceipt.paymentNumber}</strong>{" "}
                   of amount <strong>₹{Number(cancellingReceipt.amount).toLocaleString()}</strong>.
                 </p>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
-                    Cancellation Reason *
-                  </label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-350">Cancellation Reason *</label>
                   <input
                     type="text"
                     placeholder="e.g. Bounced cheque, wrong ledger entry..."
@@ -480,24 +495,22 @@ export default function SaleDetailsPage({ params }: PageProps) {
                     className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white font-semibold"
                   />
                 </div>
-              </ModalBody>
-              <ModalFooter className="pt-4 border-t border-slate-100 dark:border-slate-850 gap-3">
-                <Button variant="ghost" onPress={() => setCancellingReceipt(null)}>
-                  Close
-                </Button>
-                <Button
-                  variant="danger"
-                  isDisabled={isPending}
-                  onPress={handleCancelReceiptSubmit}
-                  className="bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl px-4"
-                >
-                  {isPending ? "Cancelling..." : "Confirm Reversal"}
-                </Button>
-              </ModalFooter>
-            </ModalDialog>
-          </ModalContainer>
-        </Modal>
-      )}
+              </>
+            )}
+          </div>
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
+            <Button variant="ghost" onPress={() => setCancellingReceipt(null)}>Close</Button>
+            <Button
+              variant="danger"
+              isDisabled={isPending}
+              onPress={handleCancelReceiptSubmit}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl px-4 border-none"
+            >
+              {isPending ? "Cancelling..." : "Confirm Reversal"}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -24,7 +24,7 @@ interface ProductSelectorProps {
 }
 
 export default function ProductSelector({
-  products,
+  products = [],
   selectedKey = "",
   onSelectionChange,
   label = "Select Product",
@@ -40,7 +40,7 @@ export default function ProductSelector({
     return {
       id: p.id,
       name: `[${p.code}] ${p.name}${specStr}`,
-      subtext: p.type.replace("_", " "),
+      subtext: p.type ? p.type.replace("_", " ") : "PRODUCT",
     };
   });
 

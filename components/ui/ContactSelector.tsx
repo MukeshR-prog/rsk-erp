@@ -22,7 +22,7 @@ interface ContactSelectorProps {
 }
 
 export default function ContactSelector({
-  contacts,
+  contacts = [],
   selectedKey = "",
   onSelectionChange,
   label = "Select Contact",
@@ -35,7 +35,7 @@ export default function ContactSelector({
   const options: DropdownOption[] = contacts.map((c) => ({
     id: c.id,
     name: c.name,
-    subtext: `${c.type}${c.phone ? ` • ${c.phone}` : ""}`,
+    subtext: `${c.type || "CONTACT"}${c.phone ? ` • ${c.phone}` : ""}`,
   }));
 
   return (

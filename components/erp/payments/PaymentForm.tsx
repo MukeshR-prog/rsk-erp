@@ -73,6 +73,7 @@ export default function PaymentForm({
     setValue,
     control,
     watch,
+    reset,
     formState: { errors },
   } = useForm<any>({
     resolver: zodResolver(isSupplier ? createPaymentSchema : createReceiptSchema),
@@ -268,7 +269,10 @@ export default function PaymentForm({
           <CurrencyInput
             label={isSupplier ? "Payment Amount" : "Receipt Amount"}
             value={field.value}
-            onChange={field.onChange}
+            onChange={(val) => {
+              const num = Number(val);
+              field.onChange(isNaN(num) ? 0 : num);
+            }}
             error={errors.amount}
           />
         )}
@@ -345,7 +349,25 @@ export default function PaymentForm({
         <Button
           type="button"
           variant="tertiary"
-          onPress={onCancel}
+          onPress={() => {
+            // Reset form to initial defaults
+            reset({
+              contactId: contactId,
+              purchaseId: isSupplier ? purchaseId : undefined,
+              saleId: !isSupplier ? saleId : undefined,
+              amount: prefilledBalance || 0,
+              paymentDate: dayjs(new Date()).format("YYYY-MM-DD"),
+              paymentMethod: "CASH",
+              referenceNumber: "",
+              notes: "",
+            });
+            // Reset selections
+            setSelectedContactId(contactId);
+            setSelectedInvoiceId(isSupplier ? purchaseId : saleId);
+            setSelectedInvoice(null);
+            // Call external cancel handler
+            onCancel();
+          }}
           className="font-bold border border-slate-150 rounded-xl"
         >
           Cancel
