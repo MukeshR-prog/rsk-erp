@@ -17,7 +17,7 @@ import {
   ModalBody,
   ModalFooter,
 } from "@heroui/react";
-import { Search, Plus, Edit, Trash2, CheckCircle } from "lucide-react";
+import { Search, Plus, Edit, Trash2, CheckCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   getExpenseCategories,
@@ -344,19 +344,43 @@ export default function ExpenseCategoriesPage() {
       </Card>
 
       {/* Add / Edit Form Modal */}
-      {isFormOpen && (
-        <Modal isOpen={isFormOpen} onOpenChange={(open) => { if (!open) handleCloseForm(); }}>
-          <ModalBackdrop />
-          <ModalContainer>
-            <ModalDialog className="max-w-md mx-4">
-              <form onSubmit={handleSubmit(onSave)}>
-                <ModalHeader className="pt-6 px-6">
-                  <span className="text-lg font-bold text-slate-900 dark:text-slate-50">
-                    {editingCategory ? "Edit Category" : "Add Expense Category"}
-                  </span>
-                </ModalHeader>
-                <ModalBody className="px-6 py-2">
-                  <div className="flex flex-col gap-4 py-2">
+      <div
+        className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+          isFormOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        {/* Backdrop overlay */}
+        <div
+          onClick={handleCloseForm}
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+            isFormOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
+        {/* Drawer container */}
+        <div
+          className={`relative w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col justify-between transform transition-transform duration-300 ease-out ${
+            isFormOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <form onSubmit={handleSubmit(onSave)} className="h-full flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-lg font-bold text-slate-900 dark:text-slate-50">
+                {editingCategory ? "Edit Category" : "Add Expense Category"}
+              </span>
+              <button
+                type="button"
+                onClick={handleCloseForm}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+              <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-sm font-bold text-slate-700 dark:text-slate-350">
                         Category Name *
@@ -376,20 +400,20 @@ export default function ExpenseCategoriesPage() {
                       )}
                     </div>
                   </div>
-                </ModalBody>
-                <ModalFooter className="px-6 pb-6 pt-4 gap-3">
-                  <Button variant="ghost" onPress={handleCloseForm} type="button">
-                    Cancel
-                  </Button>
-                  <Button variant="primary" type="submit" isPending={formPending} className="px-5 font-semibold">
-                    {editingCategory ? "Save Changes" : "Create"}
-                  </Button>
-                </ModalFooter>
-              </form>
-            </ModalDialog>
-          </ModalContainer>
-        </Modal>
-      )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
+              <Button variant="ghost" onPress={handleCloseForm} type="button">
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" isPending={formPending} className="px-5 font-semibold bg-emerald-600 hover:bg-emerald-700 border-none text-white">
+                {editingCategory ? "Save Changes" : "Create"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
 
       {/* Soft Delete confirmation */}
       {confirmOpen && deactivatingCategory && (

@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient, SaleStatus, SalePaymentStatus } from "@prisma/client";
 import { InventoryService } from "@/features/inventory/inventory.service";
 import { NumberGeneratorService } from "@/features/shared/services/numberGenerator.service";
+import { resolveDynamicProduct } from "@/features/shared/utils/dynamicOptions";
 import { CreateSaleDTO, EditSaleDTO } from "./validations";
 
 export const SaleService = {
@@ -34,15 +35,13 @@ export const SaleService = {
   },
 
   /**
-   * Validates customer rules and sufficient inventory availability.
+   * Validates customer rules and inventory levels (only for COMPLETED status)
    */
   async validateSale(
     customerId: string,
     items: { productId: string; quantity: number }[],
-    tx: Prisma.TransactionClient,
-    ignoredSaleId?: string
-  ): Promise<void> {
-    // 1. Validate customer existence and state
+    tx: Prisma.TransactionClient
+  ) {
     const customer = await tx.contact.findUnique({
       where: { id: customerId },
       select: { type: true, isActive: true },
@@ -52,13 +51,13 @@ export const SaleService = {
       throw new Error("Customer profile does not exist.");
     }
     if (customer.type !== "CUSTOMER") {
-      throw new Error("The selected profile is not registered as a customer.");
+      throw new Error("The selected contact is not registered as a customer.");
     }
     if (!customer.isActive) {
-      throw new Error("Cannot log transactions for an inactive customer.");
+      throw new Error("Cannot log sales transactions for an inactive customer.");
     }
 
-    // 2. Validate sufficient inventory
+    // Verify stock availability for each item
     for (const item of items) {
       const product = await tx.product.findUnique({
         where: { id: item.productId },
@@ -66,13 +65,15 @@ export const SaleService = {
       });
 
       if (!product) {
-        throw new Error(`Product not found with ID: ${item.productId}`);
+        throw new Error(`Product mapping not found.`);
       }
 
-      const availableStock = Number(product.currentStock || 0);
-      if (availableStock < item.quantity) {
+      const available = new Prisma.Decimal(String(product.currentStock));
+      const requested = new Prisma.Decimal(item.quantity);
+
+      if (available.lessThan(requested)) {
         throw new Error(
-          `Insufficient stock for product "${product.name}". Available: ${availableStock}, Requested: ${item.quantity}`
+          `Insufficient stock for product "${product.name}". Available: ${available.toString()}, Requested: ${requested.toString()}`
         );
       }
     }
@@ -82,6 +83,35 @@ export const SaleService = {
    * Creates a sale transaction inside a Prisma transaction wrapper.
    */
   async createSale(data: CreateSaleDTO, tx: Prisma.TransactionClient) {
+    // 0. Resolve dynamic customer if needed
+    let customerId = data.customerId;
+    if (customerId.startsWith("NEW_OPTION:")) {
+      const customerName = customerId.replace("NEW_OPTION:", "").trim();
+      let customer = await tx.contact.findFirst({
+        where: { name: customerName, type: "CUSTOMER" },
+      });
+      if (!customer) {
+        customer = await tx.contact.create({
+          data: {
+            name: customerName,
+            type: "CUSTOMER",
+            openingBalance: 0,
+            isActive: true,
+          },
+        });
+      }
+      customerId = customer.id;
+      data.customerId = customerId;
+    }
+
+    // 0b. Resolve dynamic products if needed
+    for (const item of data.items) {
+      if (item.productId.startsWith("NEW_OPTION:")) {
+        const resolvedId = await resolveDynamicProduct(item.productId, tx, "TRADING_PRODUCT");
+        item.productId = resolvedId;
+      }
+    }
+
     // 1. Merge duplicate product rows
     const mergedItems = new Map<string, { quantity: number; sellingRate: number; discount: number; remarks: string }>();
     for (const item of data.items) {

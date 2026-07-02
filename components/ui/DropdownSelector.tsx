@@ -21,6 +21,7 @@ interface DropdownSelectorProps {
   isInvalid?: boolean;
   errorMessage?: string;
   className?: string;
+  isCreatable?: boolean;
 }
 
 export default function DropdownSelector({
@@ -35,6 +36,7 @@ export default function DropdownSelector({
   isInvalid = false,
   errorMessage,
   className = "",
+  isCreatable = false,
 }: DropdownSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,6 +61,9 @@ export default function DropdownSelector({
   }, [isOpen]);
 
   const selectedOption = useMemo(() => {
+    if (selectedId && selectedId.startsWith("NEW_OPTION:")) {
+      return { id: selectedId, name: selectedId.replace("NEW_OPTION:", "") };
+    }
     return options.find((opt) => opt.id === selectedId) || null;
   }, [options, selectedId]);
 
@@ -139,10 +144,23 @@ export default function DropdownSelector({
             </div>
 
             <div className="mt-1">
-              {filteredOptions.length === 0 ? (
-                <div className="py-4 text-center text-xs text-slate-400 font-semibold italic">
-                  No items found
+              {isCreatable && searchQuery.trim() && !options.some(opt => opt.name.toLowerCase().includes(searchQuery.trim().toLowerCase())) && (
+                <div
+                  onClick={() => handleSelect(`NEW_OPTION:${searchQuery.trim()}`)}
+                  className="flex flex-col px-3 py-2 rounded-lg text-sm font-semibold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/20 cursor-pointer select-none transition-colors border-b border-slate-100 dark:border-slate-800"
+                >
+                  <span>Use / Add: "{searchQuery.trim()}"</span>
+                  <span className="text-[10px] text-emerald-500 mt-0.5 font-normal">
+                    This will create a new entry automatically on submit
+                  </span>
                 </div>
+              )}
+              {filteredOptions.length === 0 ? (
+                (!isCreatable || !searchQuery.trim()) && (
+                  <div className="py-4 text-center text-xs text-slate-400 font-semibold italic">
+                    No items found
+                  </div>
+                )
               ) : (
                 filteredOptions.map((opt) => (
                   <div

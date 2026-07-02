@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient, PurchaseStatus, PurchasePaymentStatus } from "@prisma/client";
 import { InventoryService } from "@/features/inventory/inventory.service";
 import { NumberGeneratorService } from "@/features/shared/services/numberGenerator.service";
+import { resolveDynamicProduct } from "@/features/shared/utils/dynamicOptions";
 import { PurchaseFilters } from "./types";
 import { CreatePurchaseDTO } from "./validations";
 
@@ -258,6 +259,35 @@ export const PurchaseService = {
    * Creates a purchase invoice inside a Prisma transaction wrapper.
    */
   async createPurchase(data: CreatePurchaseDTO, tx: Prisma.TransactionClient) {
+    // 0. Resolve dynamic supplier if needed
+    let supplierId = data.supplierId;
+    if (supplierId.startsWith("NEW_OPTION:")) {
+      const supplierName = supplierId.replace("NEW_OPTION:", "").trim();
+      let supplier = await tx.contact.findFirst({
+        where: { name: supplierName, type: "SUPPLIER" },
+      });
+      if (!supplier) {
+        supplier = await tx.contact.create({
+          data: {
+            name: supplierName,
+            type: "SUPPLIER",
+            openingBalance: 0,
+            isActive: true,
+          },
+        });
+      }
+      supplierId = supplier.id;
+      data.supplierId = supplierId;
+    }
+
+    // 0b. Resolve dynamic products if needed
+    for (const item of data.items) {
+      if (item.productId.startsWith("NEW_OPTION:")) {
+        const resolvedId = await resolveDynamicProduct(item.productId, tx, "RAW_MATERIAL");
+        item.productId = resolvedId;
+      }
+    }
+
     // 1. Validate supplier
     await this.validatePurchaseSupplier(data.supplierId, tx);
 

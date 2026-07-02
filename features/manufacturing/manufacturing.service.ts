@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { InventoryService } from "@/features/inventory/inventory.service";
 import { NumberGeneratorService } from "@/features/shared/services/numberGenerator.service";
+import { resolveDynamicProduct } from "@/features/shared/utils/dynamicOptions";
 
 export interface CreateExpenseInput {
   categoryId: string;
@@ -177,6 +178,13 @@ export const ManufacturingService = {
 
   async createProductionEntry(data: CreateProductionInput) {
     return prisma.$transaction(async (tx) => {
+      // 0. Resolve dynamic product if needed
+      let productId = data.productId;
+      if (productId.startsWith("NEW_OPTION:")) {
+        productId = await resolveDynamicProduct(productId, tx, "FINISHED_GOOD");
+        data.productId = productId;
+      }
+
       // 1. Verify finished goods product
       const product = await tx.product.findUnique({
         where: { id: data.productId },

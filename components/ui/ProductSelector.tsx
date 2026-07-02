@@ -20,6 +20,7 @@ interface ProductSelectorProps {
   isInvalid?: boolean;
   errorMessage?: string;
   className?: string;
+  isCreatable?: boolean;
 }
 
 export default function ProductSelector({
@@ -31,6 +32,7 @@ export default function ProductSelector({
   isInvalid = false,
   errorMessage,
   className = "",
+  isCreatable = false,
 }: ProductSelectorProps) {
   const options: DropdownOption[] = products.map((p) => {
     const spec = [p.volumeMl, p.color].filter(Boolean).join(" • ");
@@ -53,6 +55,7 @@ export default function ProductSelector({
       errorMessage={errorMessage}
       className={className}
       isClearable={true}
+      isCreatable={isCreatable}
     />
   );
 }

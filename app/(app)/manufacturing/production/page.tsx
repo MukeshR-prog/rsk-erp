@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition, Suspense } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
+import ProductSelector from "@/components/ui/ProductSelector";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
@@ -80,6 +81,7 @@ function ProductionPageContent() {
     setValue,
     watch,
     reset,
+    control,
     formState: { errors },
   } = useForm<any>({
     defaultValues: {
@@ -489,21 +491,23 @@ function ProductionPageContent() {
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
-                    Product Produced *
-                  </label>
-                  <select
-                    {...register("productId")}
-                    disabled={!!editingEntry}
-                    className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-955 dark:focus:border-slate-100 transition-all font-semibold disabled:opacity-60"
-                  >
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.code})
-                      </option>
-                    ))}
-                  </select>
-                  {errors.productId && <span className="text-xs text-red-505">{String(errors.productId.message)}</span>}
+                  <Controller
+                    name="productId"
+                    control={control}
+                    rules={{ required: "Product is required" }}
+                    render={({ field }) => (
+                      <ProductSelector
+                        products={products.map(p => ({ ...p, type: "FINISHED_GOOD" }))}
+                        selectedKey={field.value}
+                        onSelectionChange={field.onChange}
+                        label="Product Produced *"
+                        placeholder="Select or enter manufactured product name"
+                        isCreatable={true}
+                        isInvalid={!!errors.productId}
+                        errorMessage={errors.productId?.message as string}
+                      />
+                    )}
+                  />
                 </div>
 
                 <QuantityInput

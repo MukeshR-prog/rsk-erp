@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition, Suspense } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import ProductSelector from "@/components/ui/ProductSelector";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
@@ -51,6 +52,7 @@ function TradingStockPageContent() {
     handleSubmit,
     setValue,
     reset,
+    control,
     formState: { errors },
   } = useForm<any>({
     defaultValues: {
@@ -386,20 +388,23 @@ function TradingStockPageContent() {
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
-                    Product *
-                  </label>
-                  <select
-                    {...register("productId", { required: "Product is required" })}
-                    className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-slate-909 outline-none dark:border-slate-800 dark:bg-slate-955 dark:focus:border-slate-100 transition-all font-semibold"
-                  >
-                    {productListForLookup.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.code})
-                      </option>
-                    ))}
-                  </select>
-                  {errors.productId && <span className="text-xs text-red-500">{String(errors.productId.message)}</span>}
+                  <Controller
+                    name="productId"
+                    control={control}
+                    rules={{ required: "Product is required" }}
+                    render={({ field }) => (
+                      <ProductSelector
+                        products={productListForLookup}
+                        selectedKey={field.value}
+                        onSelectionChange={field.onChange}
+                        label="Product *"
+                        placeholder="Select or enter product name"
+                        isCreatable={true}
+                        isInvalid={!!errors.productId}
+                        errorMessage={errors.productId?.message as string}
+                      />
+                    )}
+                  />
                 </div>
 
                 <div className="flex flex-col gap-1.5">

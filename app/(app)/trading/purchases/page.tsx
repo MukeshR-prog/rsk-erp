@@ -20,7 +20,8 @@ import {
   Info,
   DollarSign,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  X
 } from "lucide-react";
 import {
   Button,
@@ -218,9 +219,14 @@ export default function PurchasesPage() {
   };
 
   const handleProductChange = (index: number, productId: string) => {
+    setValue(`items.${index}.productId`, productId);
+    if (productId.startsWith("NEW_OPTION:")) {
+      setValue(`items.${index}.unitId`, "default_unit");
+      setValue(`items.${index}.purchaseRate`, 0);
+      return;
+    }
     const selectedProd = products.find((p) => p.id === productId);
     if (selectedProd) {
-      setValue(`items.${index}.productId`, productId);
       setValue(`items.${index}.unitId`, selectedProd.unitId);
       setValue(`items.${index}.purchaseRate`, selectedProd.purchasePrice || 0);
     }
@@ -488,279 +494,302 @@ export default function PurchasesPage() {
       </Card>
 
       {/* Create Purchase Form Modal */}
-      {isCreateOpen && (
-        <Modal isOpen={isCreateOpen} onOpenChange={(open) => { if (!open) handleCloseCreate(); }}>
-          <ModalBackdrop />
-          <ModalContainer placement="center" scroll="inside">
-            <ModalDialog className="max-w-4xl mx-4 max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
-              <form onSubmit={handleSubmit(handleSave)}>
-                <ModalHeader className="pt-6 px-6 border-b border-slate-100 dark:border-slate-900">
-                  <span className="text-lg font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
-                    <ShoppingBag className="w-5 h-5" />
-                    <span>Create Purchase Invoice</span>
-                  </span>
-                </ModalHeader>
+      <div
+        className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+          isCreateOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        {/* Backdrop overlay */}
+        <div
+          onClick={handleCloseCreate}
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+            isCreateOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
 
-                <ModalBody className="px-6 py-4 flex-1 min-h-0 overflow-y-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4">
-                    {/* Supplier Selector */}
-                    <div className="md:col-span-2">
-                      <Controller
-                        name="supplierId"
-                        control={control}
-                        render={({ field }) => (
-                          <ContactSelector
-                            contacts={suppliers}
-                            selectedKey={field.value || ""}
-                            onSelectionChange={field.onChange}
-                            isInvalid={!!errors.supplierId}
-                            errorMessage={errors.supplierId?.message as string}
-                            label="Supplier *"
-                            placeholder="Select vendor or supplier"
-                          />
-                        )}
+        {/* Drawer container */}
+        <div
+          className={`relative w-full max-w-4xl h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col justify-between transform transition-transform duration-300 ease-out ${
+            isCreateOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <form onSubmit={handleSubmit(handleSave)} className="h-full flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-900">
+              <span className="text-lg font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+                <ShoppingBag className="w-5 h-5" />
+                <span>Create Purchase Invoice</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleCloseCreate}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4">
+                {/* Supplier Selector */}
+                <div className="md:col-span-2">
+                  <Controller
+                    name="supplierId"
+                    control={control}
+                    render={({ field }) => (
+                      <ContactSelector
+                        contacts={suppliers}
+                        selectedKey={field.value || ""}
+                        onSelectionChange={field.onChange}
+                        isInvalid={!!errors.supplierId}
+                        errorMessage={errors.supplierId?.message as string}
+                        label="Supplier *"
+                        placeholder="Select vendor or supplier"
+                        isCreatable={true}
                       />
-                    </div>
-
-                    {/* Date */}
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
-                        Purchase Date *
-                      </label>
-                      <input
-                        type="date"
-                        {...register("purchaseDate")}
-                        className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 font-semibold"
-                      />
-                      {errors.purchaseDate && (
-                        <span className="text-xs text-red-500 mt-0.5">
-                          {String(errors.purchaseDate.message)}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Supplier Invoice No */}
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
-                        Supplier Invoice No
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. INV-1092"
-                        {...register("supplierInvoiceNumber")}
-                        className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 font-semibold"
-                      />
-                    </div>
-
-                    {/* Reference */}
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
-                        Reference Number
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. PO-8902"
-                        {...register("reference")}
-                        className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 font-semibold"
-                      />
-                    </div>
-
-                    {/* Status */}
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
-                        Invoice Status
-                      </label>
-                      <select
-                        {...register("status")}
-                        className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 font-semibold"
-                      >
-                        <option value="COMPLETED">COMPLETED (Adjusts stock & outstanding)</option>
-                        <option value="DRAFT">DRAFT (Saves header only)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Items Panel */}
-                  <div className="border-t border-slate-100 dark:border-slate-900 pt-4 flex flex-col gap-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-slate-900 dark:text-slate-55">
-                        Purchase Items
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="font-bold border border-slate-200 dark:border-slate-800"
-                        onPress={() =>
-                          append({ productId: "", quantity: 1, unitId: "", purchaseRate: 0, discount: 0, remarks: "" })
-                        }
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add Line
-                      </Button>
-                    </div>
-
-                    {fields.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center p-6 border border-dashed border-slate-200 dark:border-slate-850 rounded-2xl">
-                        <AlertCircle className="w-6 h-6 text-slate-400 mb-1" />
-                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                          No items added yet. Click "Add Line" to add product details.
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        {fields.map((field, index) => {
-                          const itemValues = watchedItems[index] || {};
-                          const qty = Number(itemValues.quantity) || 0;
-                          const rate = Number(itemValues.purchaseRate) || 0;
-                          const disc = Number(itemValues.discount) || 0;
-                          const lineTotalVal = Math.max(0, qty * rate - disc);
-
-                          return (
-                            <div
-                              key={field.id}
-                              className="relative flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900 rounded-2xl"
-                            >
-                              {/* Product & Action Row */}
-                              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                                <div className="md:col-span-8">
-                                  <ProductSelector
-                                    products={products}
-                                    selectedKey={itemValues.productId || ""}
-                                    onSelectionChange={(val) => handleProductChange(index, val)}
-                                    label={`Product #${index + 1} *`}
-                                    placeholder="Select raw materials or paper rolls"
-                                  />
-                                </div>
-                                <div className="md:col-span-4 flex justify-end">
-                                  <Button
-                                    variant="danger"
-                                    className="p-2 border-red-200 text-red-650 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 rounded-xl"
-                                    size="sm"
-                                    isDisabled={fields.length === 1}
-                                    onPress={() => remove(index)}
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-1" />
-                                    Remove
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {/* Quantities, rate, discount, remarks */}
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <QuantityInput
-                                  label="Quantity *"
-                                  placeholder="e.g. 50"
-                                  error={(errors.items as any)?.[index]?.quantity}
-                                  {...register(`items.${index}.quantity`, { valueAsNumber: true })}
-                                />
-
-                                <PriceInput
-                                  label="Rate (₹) *"
-                                  placeholder="e.g. 1.20"
-                                  error={(errors.items as any)?.[index]?.purchaseRate}
-                                  {...register(`items.${index}.purchaseRate`, { valueAsNumber: true })}
-                                />
-
-                                <PriceInput
-                                  label="Discount (₹)"
-                                  placeholder="e.g. 10.00"
-                                  error={(errors.items as any)?.[index]?.discount}
-                                  {...register(`items.${index}.discount`, { valueAsNumber: true })}
-                                />
-
-                                <div className="flex flex-col justify-end items-end p-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-xl h-10">
-                                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                                    Line Total
-                                  </span>
-                                  <span className="text-sm font-black text-slate-900 dark:text-slate-50">
-                                    ₹{lineTotalVal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wider">
-                                  Remarks (Optional)
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="e.g. Batch code, specifications..."
-                                  {...register(`items.${index}.remarks`)}
-                                  className="flex h-9 w-full rounded-lg border border-slate-205 bg-white px-2.5 py-1 text-xs outline-none focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 font-medium"
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
                     )}
+                  />
+                </div>
+
+                {/* Date */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-355">
+                    Purchase Date *
+                  </label>
+                  <input
+                    type="date"
+                    {...register("purchaseDate")}
+                    className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 font-semibold"
+                  />
+                  {errors.purchaseDate && (
+                    <span className="text-xs text-red-500 mt-0.5">
+                      {String(errors.purchaseDate.message)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Supplier Invoice No */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-355">
+                    Supplier Invoice No
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. INV-1092"
+                    {...register("supplierInvoiceNumber")}
+                    className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-slate-909 dark:border-slate-800 dark:bg-slate-950 font-semibold"
+                  />
+                </div>
+
+                {/* Reference */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-355">
+                    Reference Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. PO-8902"
+                    {...register("reference")}
+                    className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-slate-909 dark:border-slate-800 dark:bg-slate-955 font-semibold"
+                  />
+                </div>
+
+                {/* Status */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-355">
+                    Invoice Status
+                  </label>
+                  <select
+                    {...register("status")}
+                    className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none focus:border-slate-909 dark:border-slate-800 dark:bg-slate-955 font-semibold"
+                  >
+                    <option value="COMPLETED">COMPLETED (Adjusts stock & outstanding)</option>
+                    <option value="DRAFT">DRAFT (Saves header only)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Items Panel */}
+              <div className="border-t border-slate-100 dark:border-slate-900 pt-4 flex flex-col gap-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-55">
+                    Purchase Items
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="font-bold border border-slate-200 dark:border-slate-800"
+                    onPress={() =>
+                      append({ productId: "", quantity: 1, unitId: "", purchaseRate: 0, discount: 0, remarks: "" })
+                    }
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Line
+                  </Button>
+                </div>
+
+                {fields.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-6 border border-dashed border-slate-200 dark:border-slate-850 rounded-2xl">
+                    <AlertCircle className="w-6 h-6 text-slate-400 mb-1" />
+                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                      No items added yet. Click "Add Line" to add product details.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {fields.map((field, index) => {
+                      const itemValues = watchedItems[index] || {};
+                      const qty = Number(itemValues.quantity) || 0;
+                      const rate = Number(itemValues.purchaseRate) || 0;
+                      const disc = Number(itemValues.discount) || 0;
+                      const lineTotalVal = Math.max(0, qty * rate - disc);
+
+                      return (
+                        <div
+                          key={field.id}
+                          className="relative flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900 rounded-2xl"
+                        >
+                          {/* Product & Action Row */}
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                            <div className="md:col-span-8">
+                              <ProductSelector
+                                products={products}
+                                selectedKey={itemValues.productId || ""}
+                                onSelectionChange={(val) => handleProductChange(index, val)}
+                                label={`Product #${index + 1} *`}
+                                placeholder="Select raw materials or paper rolls"
+                                isCreatable={true}
+                              />
+                            </div>
+                            <div className="md:col-span-4 flex justify-end">
+                              <Button
+                                variant="danger"
+                                className="p-2 border-red-200 text-red-650 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 rounded-xl"
+                                size="sm"
+                                isDisabled={fields.length === 1}
+                                onPress={() => remove(index)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-1" />
+                                Remove
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Quantities, rate, discount, remarks */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <QuantityInput
+                              label="Quantity *"
+                              placeholder="e.g. 50"
+                              error={(errors.items as any)?.[index]?.quantity}
+                              {...register(`items.${index}.quantity`, { valueAsNumber: true })}
+                            />
+
+                            <PriceInput
+                              label="Rate (₹) *"
+                              placeholder="e.g. 1.20"
+                              error={(errors.items as any)?.[index]?.purchaseRate}
+                              {...register(`items.${index}.purchaseRate`, { valueAsNumber: true })}
+                            />
+
+                            <PriceInput
+                              label="Discount (₹)"
+                              placeholder="e.g. 10.00"
+                              error={(errors.items as any)?.[index]?.discount}
+                              {...register(`items.${index}.discount`, { valueAsNumber: true })}
+                            />
+
+                            <div className="flex flex-col justify-end items-end p-2 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-850 rounded-xl h-10">
+                              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                                Line Total
+                              </span>
+                              <span className="text-sm font-black text-slate-900 dark:text-slate-50">
+                                ₹{lineTotalVal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold text-slate-700 dark:text-slate-355 uppercase tracking-wider">
+                              Remarks (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Batch code, specifications..."
+                              {...register(`items.${index}.remarks`)}
+                              className="flex h-9 w-full rounded-lg border border-slate-205 bg-white px-2.5 py-1 text-xs outline-none focus:border-slate-909 dark:border-slate-800 dark:bg-slate-950 font-medium"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Calculations & Notes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 dark:border-slate-900 pt-4 mt-4">
+                {/* Left: Notes */}
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-355">
+                      Purchase Remarks / Notes
+                    </label>
+                    <textarea
+                      placeholder="Log terms, delivery notes..."
+                      rows={3}
+                      {...register("notes")}
+                      className="flex w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none focus:border-slate-909 dark:border-slate-800 dark:bg-slate-950 font-semibold"
+                    />
+                  </div>
+                </div>
+
+                {/* Right: Subtotal & Header Adjustments */}
+                <div className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-955 rounded-2xl border border-slate-100 dark:border-slate-900">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-500">Subtotal</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-slate-50">
+                      ₹{subtotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
 
-                  {/* Calculations & Notes */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 dark:border-slate-900 pt-4 mt-4">
-                    {/* Left: Notes */}
-                    <div className="flex flex-col gap-2.5">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
-                          Purchase Remarks / Notes
-                        </label>
-                        <textarea
-                          placeholder="Log terms, delivery notes..."
-                          rows={3}
-                          {...register("notes")}
-                          className="flex w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900 dark:border-slate-800 dark:bg-slate-950 font-semibold"
-                        />
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <PriceInput
+                      label="Header Discount"
+                      placeholder="0.00"
+                      {...register("discount", { valueAsNumber: true })}
+                    />
 
-                    {/* Right: Subtotal & Header Adjustments */}
-                    <div className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-900">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-slate-500">Subtotal</span>
-                        <span className="text-sm font-bold text-slate-900 dark:text-slate-50">
-                          ₹{subtotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <PriceInput
-                          label="Header Discount"
-                          placeholder="0.00"
-                          {...register("discount", { valueAsNumber: true })}
-                        />
-
-                        <PriceInput
-                          label="Transport Charges"
-                          placeholder="0.00"
-                          {...register("transportCharges", { valueAsNumber: true })}
-                        />
-                      </div>
-
-                      <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-800 pt-3.5 mt-1.5">
-                        <span className="text-sm font-black text-slate-905 dark:text-slate-105">
-                          Grand Total
-                        </span>
-                        <span className="text-lg font-black text-slate-900 dark:text-slate-50">
-                          ₹{grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    </div>
+                    <PriceInput
+                      label="Transport Charges"
+                      placeholder="0.00"
+                      {...register("transportCharges", { valueAsNumber: true })}
+                    />
                   </div>
-                </ModalBody>
 
-                <ModalFooter className="px-6 pb-6 pt-4 border-t border-slate-100 dark:border-slate-900 gap-3 shrink-0">
-                  <Button variant="ghost" onPress={handleCloseCreate} type="button">
-                    Cancel
-                  </Button>
-                  <Button variant="primary" type="submit" isPending={isPending} className="px-5 font-semibold">
-                    Create Invoice
-                  </Button>
-                </ModalFooter>
-              </form>
-            </ModalDialog>
-          </ModalContainer>
-        </Modal>
-      )}
+                  <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-800 pt-3.5 mt-1.5">
+                    <span className="text-sm font-black text-slate-905 dark:text-slate-105">
+                      Grand Total
+                    </span>
+                    <span className="text-lg font-black text-slate-900 dark:text-slate-50">
+                      ₹{grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-900 gap-3 shrink-0 flex justify-end bg-slate-50 dark:bg-slate-900/50">
+              <Button variant="ghost" onPress={handleCloseCreate} type="button">
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" isPending={isPending} className="px-5 font-semibold bg-emerald-600 hover:bg-emerald-700 border-none text-white">
+                Create Invoice
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
