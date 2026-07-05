@@ -193,14 +193,13 @@ function ExpensesPageContent() {
       setCatSearch(match ? match.name : "");
     } else {
       reset({
-        categoryId: categories[0]?.id || "",
+        categoryId: "",
         description: "",
         amount: "",
         notes: "",
         expenseDate: dayjs().format("YYYY-MM-DD"),
       });
-      const firstCat = categories[0];
-      setCatSearch(firstCat ? firstCat.name : "");
+      setCatSearch("");
     }
     setIsFormOpen(true);
   };
