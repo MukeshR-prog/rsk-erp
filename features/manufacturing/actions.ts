@@ -41,7 +41,7 @@ export async function createExpenseAction(rawData: any) {
 
     revalidatePath("/manufacturing/expenses");
     revalidatePath("/manufacturing"); // dashboard
-    return { success: true, data: expense };
+    return { success: true, data: { ...expense, amount: Number(expense.amount) } };
   } catch (error: any) {
     console.error("createExpenseAction failed:", error);
     return { success: false, error: error.errors?.[0]?.message || error.message || "Failed to create expense" };
@@ -55,7 +55,7 @@ export async function updateExpenseAction(rawData: any) {
 
     revalidatePath("/manufacturing/expenses");
     revalidatePath("/manufacturing"); // dashboard
-    return { success: true, data: expense };
+    return { success: true, data: { ...expense, amount: Number(expense.amount) } };
   } catch (error: any) {
     console.error("updateExpenseAction failed:", error);
     return { success: false, error: error.errors?.[0]?.message || error.message || "Failed to update expense" };
@@ -116,7 +116,14 @@ export async function createProductionEntryAction(rawData: any) {
     revalidatePath("/manufacturing/stock");
     revalidatePath("/manufacturing"); // dashboard
     revalidatePath("/trading/stock"); // shared centralized stock
-    return { success: true, data: entry };
+    return {
+      success: true,
+      data: {
+        ...entry,
+        boxesProduced: Number(entry.boxesProduced),
+        totalPieces: Number(entry.totalPieces),
+      },
+    };
   } catch (error: any) {
     console.error("createProductionEntryAction failed:", error);
     return { success: false, error: error.errors?.[0]?.message || error.message || "Failed to log production" };
@@ -132,7 +139,14 @@ export async function updateProductionEntryAction(rawData: any) {
     revalidatePath("/manufacturing/stock");
     revalidatePath("/manufacturing"); // dashboard
     revalidatePath("/trading/stock"); // shared centralized stock
-    return { success: true, data: entry };
+    return {
+      success: true,
+      data: {
+        ...entry,
+        boxesProduced: Number(entry.boxesProduced),
+        totalPieces: Number(entry.totalPieces),
+      },
+    };
   } catch (error: any) {
     console.error("updateProductionEntryAction failed:", error);
     return { success: false, error: error.errors?.[0]?.message || error.message || "Failed to update production" };
