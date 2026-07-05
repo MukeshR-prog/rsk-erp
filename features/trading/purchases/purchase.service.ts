@@ -321,11 +321,10 @@ export const PurchaseService = {
       data.supplierId = supplierId;
     }
 
-    // 0b. Resolve dynamic products if needed
+    // 0b. Validate that there are no uncreated dynamic products (Product Creation Rule)
     for (const item of data.items) {
       if (item.productId.startsWith("NEW_OPTION:")) {
-        const resolvedId = await resolveDynamicProduct(item.productId, tx, "RAW_MATERIAL");
-        item.productId = resolvedId;
+        throw new Error("Automatic product creation is disabled. Please create the product before completing the purchase.");
       }
     }
 

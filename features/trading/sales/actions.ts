@@ -200,7 +200,7 @@ export async function getProductsAction() {
   try {
     const data = await prisma.product.findMany({
       where: { isActive: true },
-      select: { id: true, name: true, code: true, sellingPrice: true, currentStock: true, type: true },
+      select: { id: true, name: true, code: true, sellingPrice: true, currentStock: true, type: true, piecesPerBox: true },
       orderBy: { name: "asc" },
     });
     return {
@@ -212,6 +212,7 @@ export async function getProductsAction() {
         type: p.type,
         sellingPrice: p.sellingPrice ? Number(p.sellingPrice) : 0,
         currentStock: p.currentStock ? Number(p.currentStock) : 0,
+        piecesPerBox: p.piecesPerBox || 1000,
       })),
     };
   } catch (err: any) {

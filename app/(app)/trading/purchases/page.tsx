@@ -41,6 +41,8 @@ import Table from "@/components/ui/Table";
 import EmptyState from "@/components/ui/EmptyState";
 import ContactSelector from "@/components/ui/ContactSelector";
 import ProductSelector from "@/components/ui/ProductSelector";
+import CategorySelector from "@/components/ui/CategorySelector";
+import UnitSelector from "@/components/ui/UnitSelector";
 import { PriceInput } from "@/components/ui/form/PriceInput";
 import { QuantityInput } from "@/components/ui/form/QuantityInput";
 
@@ -50,6 +52,11 @@ import {
   getProductsList,
   createPurchase
 } from "@/features/trading/purchases/actions";
+import {
+  getProductCategoriesList,
+  getUnitsList,
+  upsertProduct
+} from "@/features/master-data/products/actions";
 import { getPurchaseDashboardMetricsAction } from "@/features/shared/dashboard/actions";
 import { purchaseSchema, PurchaseFormValues } from "@/features/trading/purchases/validations";
 import { PurchaseStatus, PurchasePaymentStatus } from "@prisma/client";
@@ -71,7 +78,14 @@ export default function PurchasesPage() {
   const [metrics, setMetrics] = useState({ totalPurchases: 0, todayPurchases: 0, pendingPayments: 0 });
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Quick Product Modal State
+  const [quickProductOpen, setQuickProductOpen] = useState(false);
+  const [quickProductIndex, setQuickProductIndex] = useState<number | null>(null);
+  const [quickProductName, setQuickProductName] = useState("");
 
   // Search & Filter State
   const [search, setSearch] = useState("");
@@ -159,7 +173,7 @@ export default function PurchasesPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [pRes, mRes, sRes, prRes] = await Promise.all([
+      const [pRes, mRes, sRes, prRes, catsRes, unitsRes] = await Promise.all([
         getPurchases({
           search,
           status: statusFilter ? (statusFilter as PurchaseStatus) : undefined,
@@ -171,6 +185,8 @@ export default function PurchasesPage() {
         getPurchaseDashboardMetricsAction(startDate || undefined, endDate || undefined),
         getSuppliersList(),
         getProductsList(),
+        getProductCategoriesList(),
+        getUnitsList(),
       ]);
 
       if (pRes.success && pRes.data) {
@@ -188,6 +204,8 @@ export default function PurchasesPage() {
       if (prRes.success && prRes.data) {
         setProducts(prRes.data);
       }
+      setCategories(catsRes || []);
+      setUnits(unitsRes || []);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load page details.");
@@ -260,12 +278,15 @@ export default function PurchasesPage() {
   };
 
   const handleProductChange = (index: number, productId: string) => {
-    setValue(`items.${index}.productId`, productId);
-    if (productId.startsWith("NEW_OPTION:")) {
-      setValue(`items.${index}.unitId`, "default_unit");
-      setValue(`items.${index}.purchaseRate`, 0);
+    if (productId && productId.startsWith("NEW_OPTION:")) {
+      const name = productId.replace("NEW_OPTION:", "").trim();
+      setQuickProductName(name);
+      setQuickProductIndex(index);
+      setQuickProductOpen(true);
+      setValue(`items.${index}.productId`, ""); // Reset selection temporarily
       return;
     }
+    setValue(`items.${index}.productId`, productId);
     const selectedProd = products.find((p) => p.id === productId);
     if (selectedProd) {
       setValue(`items.${index}.unitId`, selectedProd.unitId);
@@ -333,7 +354,7 @@ export default function PurchasesPage() {
   const renderMobileCard = (item: any) => {
     const isExpanded = expandedRows[item.id];
     return (
-      <div className="flex flex-col gap-3">
+      <div key={item.id} className="flex flex-col gap-3">
         <div className="flex justify-between items-start">
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -1176,6 +1197,262 @@ export default function PurchasesPage() {
           </form>
         </div>
       </div>
+
+      {/* Quick Product Creation Drawer */}
+      {quickProductOpen && (
+        <div
+          className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+            quickProductOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+          }`}
+        >
+          {/* Backdrop overlay */}
+          <div
+            onClick={() => setQuickProductOpen(false)}
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 opacity-100"
+          />
+
+          {/* Drawer container */}
+          <div className="relative w-full max-w-xl h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col justify-between transform transition-transform duration-300 ease-out translate-x-0">
+            <QuickProductForm
+              name={quickProductName}
+              categories={categories}
+              units={units}
+              onClose={() => setQuickProductOpen(false)}
+              onSubmit={async (values: any) => {
+                const res = await upsertProduct(values);
+                if (res.success && res.data) {
+                  toast.success(`Product "${res.data.name}" created successfully!`);
+                  const selectedUnit = units.find((u) => u.id === res.data.unitId);
+                  const newProduct = {
+                    id: res.data.id,
+                    code: res.data.code,
+                    name: res.data.name,
+                    type: res.data.type,
+                    volumeMl: res.data.volumeMl,
+                    color: res.data.color,
+                    purchasePrice: res.data.purchasePrice ? Number(res.data.purchasePrice) : 0,
+                    unitId: res.data.unitId || "",
+                    unitName: selectedUnit ? selectedUnit.name : "PCS",
+                  };
+                  setProducts((prev) => [...prev, newProduct]);
+
+                  if (quickProductIndex !== null) {
+                    setValue(`items.${quickProductIndex}.productId`, res.data.id);
+                    setValue(`items.${quickProductIndex}.unitId`, res.data.unitId || "");
+                    setValue(`items.${quickProductIndex}.purchaseRate`, Number(res.data.purchasePrice || 0));
+                  }
+                  setQuickProductOpen(false);
+                } else {
+                  toast.error(res.error || "Failed to create product");
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+interface QuickProductFormProps {
+  name: string;
+  categories: any[];
+  units: any[];
+  onClose: () => void;
+  onSubmit: (values: any) => Promise<void>;
+}
+
+function QuickProductForm({ name, categories, units, onClose, onSubmit }: QuickProductFormProps) {
+  const [productName, setProductName] = useState(name);
+  const [productCode, setProductCode] = useState(`AUTO-TRA-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [productType, setProductType] = useState<"RAW_MATERIAL" | "FINISHED_GOOD" | "TRADING_PRODUCT">("TRADING_PRODUCT");
+  const [categoryId, setCategoryId] = useState(categories[0]?.id || "");
+  const [unitId, setUnitId] = useState(units[0]?.id || "");
+  const [piecesPerBox, setPiecesPerBox] = useState<number>(1000);
+  const [purchasePrice, setPurchasePrice] = useState<number>(0);
+  const [sellingPrice, setSellingPrice] = useState<number>(0);
+  const [volumeMl, setVolumeMl] = useState("");
+  const [color, setColor] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productName || !productCode) {
+      toast.error("Name and Code are required.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        code: productCode,
+        name: productName,
+        type: productType,
+        categoryId: categoryId || undefined,
+        unitId: unitId || undefined,
+        piecesPerBox: (productType === "FINISHED_GOOD" || productType === "TRADING_PRODUCT") ? piecesPerBox : null,
+        purchasePrice: purchasePrice || null,
+        sellingPrice: sellingPrice || null,
+        volumeMl: volumeMl || null,
+        color: color || null,
+        description: description || null,
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="h-full flex flex-col justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+        <span className="text-lg font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+          <span>Create New Trading Product</span>
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-350">Product SKU / Code *</label>
+            <input
+              type="text"
+              value={productCode}
+              onChange={(e) => setProductCode(e.target.value)}
+              className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-950 dark:border-slate-800"
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-355">Product Name *</label>
+            <input
+              type="text"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-950 dark:border-slate-800"
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-355">Product Type *</label>
+            <select
+              value={productType}
+              onChange={(e) => setProductType(e.target.value as any)}
+              className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none focus:border-slate-909 dark:border-slate-800 dark:bg-slate-950 font-semibold"
+            >
+              <option value="TRADING_PRODUCT">TRADING PRODUCT (Default)</option>
+              <option value="RAW_MATERIAL">RAW MATERIAL</option>
+              <option value="FINISHED_GOOD">FINISHED GOOD</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <CategorySelector
+              categories={categories}
+              selectedKey={categoryId}
+              onSelectionChange={setCategoryId}
+              label="Product Category"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <UnitSelector
+              units={units}
+              selectedKey={unitId}
+              onSelectionChange={setUnitId}
+              label="Unit of Measure"
+            />
+          </div>
+
+          {(productType === "FINISHED_GOOD" || productType === "TRADING_PRODUCT") && (
+            <>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-355">Pieces per Box</label>
+                <input
+                  type="number"
+                  value={piecesPerBox}
+                  onChange={(e) => setPiecesPerBox(Number(e.target.value) || 0)}
+                  className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-950 dark:border-slate-800"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-355">Volume capacity (ml)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 150ml"
+                  value={volumeMl}
+                  onChange={(e) => setVolumeMl(e.target.value)}
+                  className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-955 dark:border-slate-800"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-355">Color / Style</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Red"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-950 dark:border-slate-800"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-355">Default Buy Price (₹)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(Number(e.target.value) || 0)}
+              className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-950 dark:border-slate-800"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-355">Default Sell Price (₹)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={sellingPrice}
+              onChange={(e) => setSellingPrice(Number(e.target.value) || 0)}
+              className="flex h-10 w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-950 dark:border-slate-800"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-355">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="flex w-full rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-950 dark:border-slate-800"
+              rows={2}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
+        <Button variant="ghost" onPress={onClose} type="button">
+          Cancel
+        </Button>
+        <Button variant="primary" type="submit" isPending={submitting} className="px-5 font-semibold bg-emerald-600 hover:bg-emerald-700 border-none text-white">
+          Create Product
+        </Button>
+      </div>
+    </form>
   );
 }
