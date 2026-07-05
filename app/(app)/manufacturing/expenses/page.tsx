@@ -26,7 +26,7 @@ import {
   deleteExpenseAction,
   getExpensesAction,
 } from "@/features/manufacturing/actions";
-import { getExpenseCategories } from "@/features/master-data/categories/expense/actions";
+import { getExpenseCategories, createExpenseCategory } from "@/features/master-data/categories/expense/actions";
 import dayjs from "dayjs";
 import { PriceInput } from "@/components/ui/form/PriceInput";
 
@@ -62,10 +62,54 @@ function ExpensesPageContent() {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [isPending, startTransition] = useTransition();
 
+  // Date Filter States
+  const [datePreset, setDatePreset] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const handleDatePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    setPage(1);
+
+    const today = dayjs();
+    switch (preset) {
+      case "today":
+        setStartDate(today.format("YYYY-MM-DD"));
+        setEndDate(today.format("YYYY-MM-DD"));
+        break;
+      case "week":
+        setStartDate(today.startOf("week").format("YYYY-MM-DD"));
+        setEndDate(today.endOf("week").format("YYYY-MM-DD"));
+        break;
+      case "month":
+        setStartDate(today.startOf("month").format("YYYY-MM-DD"));
+        setEndDate(today.endOf("month").format("YYYY-MM-DD"));
+        break;
+      case "year":
+        setStartDate(today.startOf("year").format("YYYY-MM-DD"));
+        setEndDate(today.endOf("year").format("YYYY-MM-DD"));
+        break;
+      case "all":
+      default:
+        setStartDate("");
+        setEndDate("");
+        break;
+    }
+  };
+
   // Form Modal States
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseData | null>(null);
   const [formPending, setFormPending] = useState(false);
+
+  // Combobox category states
+  const [catSearch, setCatSearch] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [creatingCat, setCreatingCat] = useState(false);
+
+  const filteredCategories = categories.filter((c) =>
+    c.name.toLowerCase().includes(catSearch.toLowerCase())
+  );
 
   // Delete States
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -99,6 +143,8 @@ function ExpensesPageContent() {
       const res = await getExpensesAction({
         search,
         categoryId: selectedCategory,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
         page,
         pageSize: 10,
       });
@@ -119,7 +165,7 @@ function ExpensesPageContent() {
 
   useEffect(() => {
     loadExpenses();
-  }, [page, selectedCategory]);
+  }, [page, selectedCategory, startDate, endDate]);
 
   useEffect(() => {
     if (triggerNew && categories.length > 0 && !isFormOpen) {
@@ -143,6 +189,8 @@ function ExpensesPageContent() {
       setValue("amount", expense.amount);
       setValue("notes", expense.notes || "");
       setValue("expenseDate", dayjs(expense.expenseDate).format("YYYY-MM-DD"));
+      const match = categories.find((c) => c.id === expense.categoryId);
+      setCatSearch(match ? match.name : "");
     } else {
       reset({
         categoryId: categories[0]?.id || "",
@@ -151,6 +199,8 @@ function ExpensesPageContent() {
         notes: "",
         expenseDate: dayjs().format("YYYY-MM-DD"),
       });
+      const firstCat = categories[0];
+      setCatSearch(firstCat ? firstCat.name : "");
     }
     setIsFormOpen(true);
   };
@@ -158,6 +208,8 @@ function ExpensesPageContent() {
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingExpense(null);
+    setCatSearch("");
+    setDropdownOpen(false);
     reset();
   };
 
@@ -370,6 +422,58 @@ function ExpensesPageContent() {
         </form>
       </div>
 
+      {/* Date Filter Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-4 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-850/60 mb-2">
+        <div className="flex flex-col gap-1.5 w-full">
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date Period Filter</span>
+          <select
+            value={datePreset}
+            onChange={(e) => handleDatePresetChange(e.target.value)}
+            className="h-10 rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 font-semibold"
+          >
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">Weekly (This Week)</option>
+            <option value="month">Monthly (This Month)</option>
+            <option value="year">Yearly (This Year)</option>
+            <option value="custom">Custom Date Range</option>
+          </select>
+        </div>
+
+        {datePreset === "custom" ? (
+          <>
+            <div className="flex flex-col gap-1.5 w-full">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">From Date</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-10 px-3 rounded-xl border border-slate-205 bg-white text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 font-semibold"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 w-full">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">To Date</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-10 px-3 rounded-xl border border-slate-205 bg-white text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 font-semibold"
+              />
+            </div>
+          </>
+        ) : datePreset !== "all" ? (
+          <div className="sm:col-span-3 text-xs font-bold text-slate-500 dark:text-slate-450 self-center pb-2">
+            Active Filter Range: <span className="text-slate-800 dark:text-slate-200 font-extrabold">{startDate}</span> to <span className="text-slate-800 dark:text-slate-200 font-extrabold">{endDate}</span>
+          </div>
+        ) : null}
+      </div>
+
       <Card>
         {isPending ? (
           <div className="py-20 text-center font-medium text-slate-500">Loading expenses log...</div>
@@ -456,17 +560,91 @@ function ExpensesPageContent() {
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
                     Category *
                   </label>
-                  <select
-                    {...register("categoryId")}
-                    className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-955 dark:focus:border-slate-100 transition-all font-semibold"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.categoryId && <span className="text-xs text-red-505">{String(errors.categoryId.message)}</span>}
+                  
+                  {/* Hidden field to store actual categoryId for useForm validation */}
+                  <input type="hidden" {...register("categoryId", { required: "Category is required" })} />
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search or type new category..."
+                      value={catSearch}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCatSearch(val);
+                        // Find exact match to pre-set categoryId
+                        const match = categories.find((c) => c.name.toLowerCase() === val.trim().toLowerCase());
+                        if (match) {
+                          setValue("categoryId", match.id);
+                        } else {
+                          setValue("categoryId", ""); // force select exact or create new
+                        }
+                        setDropdownOpen(true);
+                      }}
+                      onFocus={() => setDropdownOpen(true)}
+                      className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-955 dark:focus:border-slate-100 transition-all font-semibold"
+                    />
+
+                    {dropdownOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
+                        <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:bg-slate-955 shadow-lg z-20 p-1.5 flex flex-col gap-0.5">
+                          {filteredCategories.length > 0 ? (
+                            filteredCategories.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setValue("categoryId", c.id);
+                                  setCatSearch(c.name);
+                                  setDropdownOpen(false);
+                                }}
+                                className="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-850 dark:text-slate-200 transition-colors"
+                              >
+                                {c.name}
+                              </button>
+                            ))
+                          ) : (
+                            <span className="px-3 py-2 text-xs text-slate-500 font-semibold italic">
+                              No categories match
+                            </span>
+                          )}
+
+                          {catSearch.trim() !== "" &&
+                            !categories.some((c) => c.name.toLowerCase() === catSearch.trim().toLowerCase()) && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    setCreatingCat(true);
+                                    const res = await createExpenseCategory(catSearch.trim());
+                                    if (res.success && res.data) {
+                                      const newCat = res.data;
+                                      setCategories((prev) => [...prev, newCat]);
+                                      setValue("categoryId", newCat.id);
+                                      setCatSearch(newCat.name);
+                                      setDropdownOpen(false);
+                                      toast.success(`Category "${newCat.name}" created!`);
+                                    } else {
+                                      toast.error(res.error || "Failed to create category");
+                                    }
+                                  } catch (e) {
+                                    toast.error("Failed to create category");
+                                  } finally {
+                                    setCreatingCat(false);
+                                  }
+                                }}
+                                disabled={creatingCat}
+                                className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors mt-1 border-t border-slate-100 dark:border-slate-800 pt-2"
+                              >
+                                {creatingCat ? "Creating..." : `+ Create "${catSearch}" category`}
+                              </button>
+                            )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {errors.categoryId && <span className="text-xs text-red-500 font-bold">{String(errors.categoryId.message)}</span>}
                 </div>
 
                 <div className="flex flex-col gap-1.5">

@@ -22,10 +22,10 @@ interface SaleItemsTableProps {
 
 export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({ items }) => {
   return (
-    <div className="overflow-x-auto w-full rounded-xl border border-slate-800 bg-slate-900/50">
-      <table className="w-full text-left border-collapse text-sm text-slate-300">
+    <div className="overflow-x-auto w-full rounded-2xl border border-slate-150 dark:border-slate-850 bg-white dark:bg-slate-950/20 shadow-xs">
+      <table className="w-full text-left border-collapse text-sm text-slate-700 dark:text-slate-300">
         <thead>
-          <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-semibold">
+          <tr className="bg-slate-50/60 dark:bg-slate-900/50 border-b border-slate-150 dark:border-slate-850 text-slate-500 dark:text-slate-450 font-bold text-xs uppercase">
             <th className="p-3.5">Code</th>
             <th className="p-3.5">Product Name</th>
             <th className="p-3.5 text-right">Sold Qty</th>
@@ -35,7 +35,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({ items }) => {
             <th className="p-3.5">Remarks</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/60">
+        <tbody className="divide-y divide-slate-100 dark:divide-slate-850/50">
           {items.map((item) => {
             const qty = Number(item.quantity);
             const rate = Number(item.sellingRate);
@@ -45,27 +45,27 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({ items }) => {
             const spec = [item.product.volumeMl, item.product.color].filter(Boolean).join(" | ");
 
             return (
-              <tr key={item.id} className="hover:bg-slate-900/40 transition-colors">
-                <td className="p-3.5 font-mono text-slate-400">{item.product.code}</td>
+              <tr key={item.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-900/10 transition-colors">
+                <td className="p-3.5 font-mono text-xs text-slate-550 dark:text-slate-400 font-semibold">{item.product.code}</td>
                 <td className="p-3.5">
                   <div className="flex flex-col">
-                    <span className="font-semibold text-white">{item.product.name}</span>
-                    {spec && <span className="text-xs text-slate-500 mt-0.5">{spec}</span>}
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{item.product.name}</span>
+                    {spec && <span className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 font-semibold">{spec}</span>}
                   </div>
                 </td>
-                <td className="p-3.5 text-right font-semibold text-slate-100">
+                <td className="p-3.5 text-right font-bold text-slate-900 dark:text-slate-100">
                   {qty.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
                 </td>
-                <td className="p-3.5 text-right text-slate-200">
+                <td className="p-3.5 text-right font-semibold text-slate-700 dark:text-slate-300">
                   ₹{rate.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </td>
-                <td className="p-3.5 text-right text-rose-500">
+                <td className="p-3.5 text-right font-bold text-rose-600 dark:text-rose-455">
                   ₹{disc.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </td>
-                <td className="p-3.5 text-right font-bold text-emerald-500">
+                <td className="p-3.5 text-right font-black text-emerald-600 dark:text-emerald-450">
                   ₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </td>
-                <td className="p-3.5 text-slate-400 truncate max-w-[180px]" title={item.remarks || ""}>
+                <td className="p-3.5 text-slate-500 dark:text-slate-400 truncate max-w-[180px] font-medium" title={item.remarks || ""}>
                   {item.remarks || "-"}
                 </td>
               </tr>
@@ -73,7 +73,7 @@ export const SaleItemsTable: React.FC<SaleItemsTableProps> = ({ items }) => {
           })}
           {items.length === 0 && (
             <tr>
-              <td colSpan={7} className="p-8 text-center text-slate-500">
+              <td colSpan={7} className="p-8 text-center text-slate-450 dark:text-slate-500 font-bold uppercase text-xs tracking-wider">
                 No items found on this invoice.
               </td>
             </tr>
