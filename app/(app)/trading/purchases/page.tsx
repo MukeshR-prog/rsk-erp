@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
+import dayjs from "dayjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import {
@@ -79,6 +80,42 @@ export default function PurchasesPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  // Date Preset Filter State
+  const [datePreset, setDatePreset] = useState<string>("all"); // "all" | "today" | "week" | "month" | "year" | "custom"
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const handleDatePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    const today = dayjs();
+    if (preset === "all") {
+      setStartDate("");
+      setEndDate("");
+    } else if (preset === "today") {
+      const formatted = today.format("YYYY-MM-DD");
+      setStartDate(formatted);
+      setEndDate(formatted);
+    } else if (preset === "week") {
+      setStartDate(today.startOf("week").format("YYYY-MM-DD"));
+      setEndDate(today.endOf("week").format("YYYY-MM-DD"));
+    } else if (preset === "month") {
+      setStartDate(today.startOf("month").format("YYYY-MM-DD"));
+      setEndDate(today.endOf("month").format("YYYY-MM-DD"));
+    } else if (preset === "year") {
+      setStartDate(today.startOf("year").format("YYYY-MM-DD"));
+      setEndDate(today.endOf("year").format("YYYY-MM-DD"));
+    }
+    setPage(1);
+  };
+
   // Form State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
@@ -128,8 +165,10 @@ export default function PurchasesPage() {
           status: statusFilter ? (statusFilter as PurchaseStatus) : undefined,
           paymentStatus: paymentFilter ? (paymentFilter as PurchasePaymentStatus) : undefined,
           page,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }),
-        getPurchaseDashboardMetricsAction(),
+        getPurchaseDashboardMetricsAction(startDate || undefined, endDate || undefined),
         getSuppliersList(),
         getProductsList(),
       ]);
@@ -159,7 +198,7 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     loadData();
-  }, [search, statusFilter, paymentFilter, page]);
+  }, [search, statusFilter, paymentFilter, page, startDate, endDate]);
 
   // Form Calculations
   const calculateTotals = () => {
@@ -292,6 +331,7 @@ export default function PurchasesPage() {
   };
 
   const renderMobileCard = (item: any) => {
+    const isExpanded = expandedRows[item.id];
     return (
       <div className="flex flex-col gap-3">
         <div className="flex justify-between items-start">
@@ -310,29 +350,63 @@ export default function PurchasesPage() {
             </span>
           </div>
         </div>
-        <div className="flex justify-between items-center border-t border-slate-50 dark:border-slate-900 pt-2">
-          <span
-            className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              item.status === "COMPLETED"
-                ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
-                : item.status === "DRAFT"
-                ? "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-400"
-                : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
-            }`}
-          >
-            {item.status}
-          </span>
-          <span
-            className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              item.paymentStatus === "PAID"
-                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
-                : item.paymentStatus === "PARTIALLY_PAID"
-                ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
-                : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
-            }`}
-          >
-            {item.paymentStatus.replace("_", " ")}
-          </span>
+
+        {isExpanded && item.items && item.items.length > 0 && (
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 text-[11px] flex flex-col gap-1.5 mt-1">
+            <span className="font-bold text-slate-500 uppercase text-[9px] tracking-wider mb-1">Items:</span>
+            {item.items.map((it: any) => (
+              <div key={it.id} className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-1 last:border-0 last:pb-0">
+                <span className="font-semibold text-slate-850 dark:text-slate-200">{it.productName}</span>
+                <span className="text-slate-500 font-semibold">{it.quantity} {it.unitName} × ₹{it.purchaseRate}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-between items-center border-t border-slate-50 dark:border-slate-900 pt-2 mt-1">
+          <div className="flex gap-2">
+            <span
+              className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                item.status === "COMPLETED"
+                  ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
+                  : item.status === "DRAFT"
+                  ? "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-400"
+                  : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
+              }`}
+            >
+              {item.status}
+            </span>
+            <span
+              className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                item.paymentStatus === "PAID"
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
+                  : item.paymentStatus === "PARTIALLY_PAID"
+                  ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
+                  : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
+              }`}
+            >
+              {item.paymentStatus.replace("_", " ")}
+            </span>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleRow(item.id);
+              }}
+              className="text-xs font-bold text-slate-500 hover:text-slate-750"
+            >
+              {isExpanded ? "Hide Items" : "Show Items"}
+            </button>
+            <Link
+              href={`/trading/purchases/${item.id}`}
+              className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1"
+            >
+              <span>Report</span>
+              <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -443,6 +517,58 @@ export default function PurchasesPage() {
             </div>
           </div>
 
+          {/* Date Filter Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-4 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-850/60 mb-2">
+            <div className="flex flex-col gap-1.5 w-full">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date Period Filter</span>
+              <select
+                value={datePreset}
+                onChange={(e) => handleDatePresetChange(e.target.value)}
+                className="h-10 rounded-xl border border-slate-205 bg-white px-3 py-2 text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 font-semibold"
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">Weekly (This Week)</option>
+                <option value="month">Monthly (This Month)</option>
+                <option value="year">Yearly (This Year)</option>
+                <option value="custom">Custom Date Range</option>
+              </select>
+            </div>
+
+            {datePreset === "custom" ? (
+              <>
+                <div className="flex flex-col gap-1.5 w-full">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">From Date</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-10 px-3 rounded-xl border border-slate-205 bg-white text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 font-semibold"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5 w-full">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">To Date</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-10 px-3 rounded-xl border border-slate-205 bg-white text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 font-semibold"
+                  />
+                </div>
+              </>
+            ) : datePreset !== "all" ? (
+              <div className="sm:col-span-3 text-xs font-bold text-slate-500 dark:text-slate-450 self-center pb-2">
+                Active Filter Range: <span className="text-slate-800 dark:text-slate-200 font-extrabold">{startDate}</span> to <span className="text-slate-800 dark:text-slate-200 font-extrabold">{endDate}</span>
+              </div>
+            ) : null}
+          </div>
+
           {/* Table Listing */}
           {loading ? (
             <div className="flex flex-col gap-2 py-8 items-center justify-center">
@@ -452,20 +578,187 @@ export default function PurchasesPage() {
               </span>
             </div>
           ) : (
-            <Table
-              headers={headers}
-              data={purchases}
-              renderCell={renderCell}
-              renderMobileCard={renderMobileCard}
-              keyField="id"
-              onRowClick={(item) => router.push(`/trading/purchases/${item.id}`)}
-              emptyState={
-                <EmptyState
-                  title="No Purchases Found"
-                  description="Supplier bills or purchase records registered will show up here."
-                />
-              }
-            />
+            <div className="w-full">
+              {/* Mobile View */}
+              <div className="flex flex-col gap-4.5 md:hidden">
+                {purchases.length === 0 ? (
+                  <EmptyState
+                    title="No Purchases Found"
+                    description="Supplier bills or purchase records registered will show up here."
+                  />
+                ) : (
+                  purchases.map((item) => renderMobileCard(item))
+                )}
+              </div>
+
+              {/* Desktop View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full border-collapse border border-slate-100 dark:border-slate-900 rounded-2xl bg-white dark:bg-slate-950 overflow-hidden shadow-sm">
+                  <thead>
+                    <tr className="bg-slate-50/60 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-bold uppercase text-[11px]">
+                      <th className="py-3.5 px-4 text-left w-10"></th>
+                      <th className="py-3.5 px-4 text-left">Purchase No</th>
+                      <th className="py-3.5 px-4 text-left">Supplier</th>
+                      <th className="py-3.5 px-4 text-left">Date</th>
+                      <th className="py-3.5 px-4 text-right">Total Amount</th>
+                      <th className="py-3.5 px-4 text-center">Status</th>
+                      <th className="py-3.5 px-4 text-center">Payment</th>
+                      <th className="py-3.5 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchases.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-slate-500">
+                          <EmptyState
+                            title="No Purchases Found"
+                            description="Supplier bills or purchase records registered will show up here."
+                          />
+                        </td>
+                      </tr>
+                    ) : (
+                      purchases.map((item) => {
+                        const isExpanded = expandedRows[item.id];
+                        return (
+                          <React.Fragment key={item.id}>
+                            <tr
+                              onClick={() => toggleRow(item.id)}
+                              className="border-b border-slate-50 dark:border-slate-900 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors cursor-pointer"
+                            >
+                              <td className="py-4 px-4 text-center">
+                                <button
+                                  type="button"
+                                  className="text-slate-400 hover:text-slate-600 transition-transform duration-200"
+                                  style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleRow(item.id);
+                                  }}
+                                >
+                                  <ChevronRight className="w-4 h-4" />
+                                </button>
+                              </td>
+                              <td className="py-4 px-4 font-bold text-slate-900 dark:text-white">
+                                {item.purchaseNumber}
+                              </td>
+                              <td className="py-4 px-4 font-medium text-slate-800 dark:text-slate-200">
+                                {item.supplierName}
+                              </td>
+                              <td className="py-4 px-4 text-slate-650 dark:text-slate-400">
+                                {new Date(item.purchaseDate).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </td>
+                              <td className="py-4 px-4 text-right font-extrabold text-slate-900 dark:text-white">
+                                ₹{item.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="py-4 px-4 text-center">
+                                <span
+                                  className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                    item.status === "COMPLETED"
+                                      ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
+                                      : item.status === "DRAFT"
+                                      ? "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-400"
+                                      : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
+                                  }`}
+                                >
+                                  {item.status}
+                                </span>
+                              </td>
+                              <td className="py-4 px-4 text-center">
+                                <span
+                                  className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                    item.paymentStatus === "PAID"
+                                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
+                                      : item.paymentStatus === "PARTIALLY_PAID"
+                                      ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
+                                      : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
+                                  }`}
+                                >
+                                  {item.paymentStatus.replace("_", " ")}
+                                </span>
+                              </td>
+                              <td className="py-4 px-4 text-right">
+                                <Link
+                                  href={`/trading/purchases/${item.id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 text-slate-900 hover:text-slate-700 dark:text-white dark:hover:text-slate-300 font-extrabold text-xs bg-slate-100 dark:bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors"
+                                >
+                                  <span>Report</span>
+                                  <ArrowRight className="w-3 h-3" />
+                                </Link>
+                              </td>
+                            </tr>
+                            {isExpanded && (
+                              <tr className="bg-slate-50/30 dark:bg-slate-900/10">
+                                <td colSpan={8} className="p-0">
+                                  <div className="px-12 py-4 bg-slate-50/50 dark:bg-slate-950/20 border-b border-slate-100 dark:border-slate-900">
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">
+                                      Items Log in Purchase:
+                                    </h4>
+                                    <table className="w-full text-xs text-left border-collapse">
+                                      <thead>
+                                        <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase text-[10px]">
+                                          <th className="pb-2 font-bold">Product Name</th>
+                                          <th className="pb-2 font-bold text-right">Quantity</th>
+                                          <th className="pb-2 font-bold text-right">Purchase Price</th>
+                                          <th className="pb-2 font-bold text-right">Discount</th>
+                                          <th className="pb-2 font-bold text-right">Total</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {item.items && item.items.length > 0 ? (
+                                          item.items.map((it: any) => (
+                                            <tr
+                                              key={it.id}
+                                              className="border-b border-slate-100 dark:border-slate-800/50 last:border-b-0"
+                                            >
+                                              <td className="py-2.5 font-bold text-slate-900 dark:text-slate-100">
+                                                {it.productName}
+                                              </td>
+                                              <td className="py-2.5 text-right font-semibold">
+                                                {it.quantity} {it.unitName}
+                                              </td>
+                                              <td className="py-2.5 text-right font-semibold">
+                                                ₹{it.purchaseRate.toLocaleString("en-IN", {
+                                                  minimumFractionDigits: 2,
+                                                })}
+                                              </td>
+                                              <td className="py-2.5 text-right font-semibold text-amber-600">
+                                                ₹{it.discount.toLocaleString("en-IN", {
+                                                  minimumFractionDigits: 2,
+                                                })}
+                                              </td>
+                                              <td className="py-2.5 text-right font-black text-slate-900 dark:text-white">
+                                                ₹{it.lineTotal.toLocaleString("en-IN", {
+                                                  minimumFractionDigits: 2,
+                                                })}
+                                              </td>
+                                            </tr>
+                                          ))
+                                        ) : (
+                                          <tr>
+                                            <td colSpan={5} className="py-2 text-center text-slate-400">
+                                              No items registered in this purchase invoice.
+                                            </td>
+                                          </tr>
+                                        )}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {/* Simple Pagination Footer */}
@@ -667,7 +960,7 @@ export default function PurchasesPage() {
                             <div className="md:col-span-4 flex justify-end">
                               <Button
                                 variant="danger"
-                                className="p-2 border-red-200 text-red-650 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 rounded-xl"
+                                className="p-2 border-red-200 text-red-650 bg-red-300 hover:bg-red-500 dark:bg-red-950/20 dark:text-red-400 rounded-xl"
                                 size="sm"
                                 isDisabled={fields.length === 1}
                                 onPress={() => remove(index)}

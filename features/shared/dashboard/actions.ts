@@ -43,9 +43,9 @@ export async function getTradingDashboardAction() {
 /**
  * Server action to fetch purchase dashboard metrics.
  */
-export async function getPurchaseDashboardMetricsAction() {
+export async function getPurchaseDashboardMetricsAction(startDate?: string, endDate?: string) {
   try {
-    const data = await DashboardService.getPurchaseMetrics();
+    const data = await DashboardService.getPurchaseMetrics(startDate, endDate);
     return {
       success: true,
       data,

@@ -6,6 +6,8 @@ export interface PurchaseFilters {
   paymentStatus?: PurchasePaymentStatus;
   page?: number;
   limit?: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface PurchaseListItem {

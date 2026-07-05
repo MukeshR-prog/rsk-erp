@@ -98,6 +98,19 @@ export const PurchaseService = {
       ];
     }
 
+    if (filters.startDate || filters.endDate) {
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (filters.startDate) {
+        dateFilter.gte = new Date(filters.startDate);
+      }
+      if (filters.endDate) {
+        const end = new Date(filters.endDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.lte = end;
+      }
+      where.purchaseDate = dateFilter;
+    }
+
     const [items, total] = await Promise.all([
       client.purchase.findMany({
         where,
@@ -105,6 +118,25 @@ export const PurchaseService = {
           supplier: {
             select: {
               name: true,
+            },
+          },
+          items: {
+            select: {
+              id: true,
+              quantity: true,
+              purchaseRate: true,
+              discount: true,
+              lineTotal: true,
+              product: {
+                select: {
+                  name: true,
+                },
+              },
+              unit: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -127,6 +159,15 @@ export const PurchaseService = {
       status: item.status,
       paymentStatus: item.paymentStatus,
       createdAt: item.createdAt,
+      items: item.items.map((it: any) => ({
+        id: it.id,
+        productName: it.product.name,
+        quantity: Number(it.quantity),
+        unitName: it.unit.name,
+        purchaseRate: Number(it.purchaseRate),
+        discount: Number(it.discount),
+        lineTotal: Number(it.lineTotal),
+      })),
     }));
 
     return {

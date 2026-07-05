@@ -15,6 +15,7 @@ import {
   Truck,
   TrendingDown,
   X,
+  Printer,
 } from "lucide-react";
 import { Button } from "@heroui/react";
 
@@ -102,6 +103,165 @@ export default function SaleDetailsPage({ params }: PageProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrintReceipt = () => {
+    // Create a print window to print invoice cleanly
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Popup blocked! Please allow popups to print/download invoice.");
+      return;
+    }
+
+    const itemsHtml = sale.items.map((it: any) => `
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 8px; font-weight: 600;">${it.product?.name || "Product"}</td>
+        <td style="padding: 8px; text-align: right;">${it.quantity}</td>
+        <td style="padding: 8px; text-align: right;">₹${Number(it.sellingRate).toFixed(2)}</td>
+        <td style="padding: 8px; text-align: right;">₹${Number(it.discount).toFixed(2)}</td>
+        <td style="padding: 8px; text-align: right; font-weight: 700;">₹${Number(it.lineTotal).toFixed(2)}</td>
+      </tr>
+    `).join("");
+
+    const paymentsHtml = sale.payments.map((p: any) => `
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 6px; font-size: 11px;">${p.paymentNumber}</td>
+        <td style="padding: 6px; font-size: 11px; text-align: center;">${new Date(p.paymentDate).toLocaleDateString()}</td>
+        <td style="padding: 6px; font-size: 11px; text-align: center;">${p.paymentMethod}</td>
+        <td style="padding: 6px; font-size: 11px; text-align: right; font-weight: 600;">₹${Number(p.amount).toFixed(2)}</td>
+      </tr>
+    `).join("");
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt_${sale.saleNumber}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; color: #1e293b; padding: 40px; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; }
+            .company-info { text-align: left; }
+            .invoice-info { text-align: right; }
+            .title { font-size: 24px; font-weight: 900; color: #059669; margin: 0; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+            .card { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; }
+            .card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
+            .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            .table th { background-color: #f8fafc; padding: 10px; font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; text-align: left; border-bottom: 1px solid #cbd5e1; }
+            .totals { margin-top: 30px; border-top: 2px solid #e2e8f0; padding-top: 15px; display: flex; flex-direction: column; align-items: flex-end; }
+            .total-row { display: flex; width: 300px; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+            .grand-total { font-size: 18px; font-weight: 800; color: #059669; border-top: 1px solid #cbd5e1; padding-top: 8px; margin-top: 4px; }
+            @media print {
+              body { padding: 20px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-info">
+              <h2 style="margin: 0; color: #0f172a; font-weight: 800;">RSK Manufacturing & Trading</h2>
+              <p style="font-size: 12px; color: #64748b; margin: 4px 0 0 0;">ERP Billing System</p>
+            </div>
+            <div class="invoice-info">
+              <h1 class="title">RETAIL INVOICE</h1>
+              <p style="font-size: 14px; font-weight: 700; margin: 5px 0 0 0;">No: ${sale.saleNumber}</p>
+              <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0;">Date: ${new Date(sale.saleDate).toLocaleDateString("en-IN")}</p>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="card">
+              <div class="card-title">Customer Details</div>
+              <p style="margin: 0; font-weight: 700; font-size: 14px;">${sale.customer?.name}</p>
+              ${sale.customer?.contactPerson ? `<p style="margin: 4px 0; font-size: 12px;">Attn: ${sale.customer.contactPerson}</p>` : ""}
+              ${sale.customer?.phone ? `<p style="margin: 4px 0; font-size: 12px; font-family: monospace;">Mob: ${sale.customer.phone}</p>` : ""}
+              ${sale.customer?.gstNumber ? `<p style="margin: 4px 0; font-size: 12px; font-family: monospace; font-weight: 600;">GSTIN: ${sale.customer.gstNumber.toUpperCase()}</p>` : ""}
+            </div>
+            <div class="card">
+              <div class="card-title">Shipment Info & Logistics</div>
+              <p style="margin: 0; font-size: 12px;"><strong>Ref PO:</strong> ${sale.reference || "-"}</p>
+              <p style="margin: 4px 0; font-size: 12px;"><strong>Status:</strong> ${sale.status}</p>
+              <p style="margin: 4px 0; font-size: 12px;"><strong>Notes:</strong> ${sale.notes || "N/A"}</p>
+            </div>
+          </div>
+
+          <h3 style="font-size: 14px; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 8px;">Sold Items Details</h3>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Product Description</th>
+                <th style="text-align: right; width: 80px;">Qty</th>
+                <th style="text-align: right; width: 120px;">Selling Rate</th>
+                <th style="text-align: right; width: 100px;">Discount</th>
+                <th style="text-align: right; width: 120px;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+            <div style="width: 50%;">
+              ${sale.payments && sale.payments.length > 0 ? `
+                <h4 style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #475569; margin: 0 0 8px 0;">Receipt Payments Log</h4>
+                <table class="table" style="font-size: 11px;">
+                  <thead>
+                    <tr>
+                      <th style="padding: 6px;">Receipt No</th>
+                      <th style="padding: 6px; text-align: center;">Date</th>
+                      <th style="padding: 6px; text-align: center;">Method</th>
+                      <th style="padding: 6px; text-align: right;">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${paymentsHtml}
+                  </tbody>
+                </table>
+              ` : '<p style="font-size: 12px; color: #94a3b8; font-style: italic; margin-top: 10px;">No payment receipts logged yet.</p>'}
+            </div>
+            
+            <div class="totals" style="width: 45%;">
+              <div class="total-row">
+                <span style="color: #64748b;">Subtotal:</span>
+                <span>₹${subtotal.toFixed(2)}</span>
+              </div>
+              <div class="total-row" style="color: #d97706;">
+                <span>Discount:</span>
+                <span>- ₹${discount.toFixed(2)}</span>
+              </div>
+              <div class="total-row" style="color: #475569;">
+                <span>Transport Charges:</span>
+                <span>+ ₹${transportCharges.toFixed(2)}</span>
+              </div>
+              <div class="total-row grand-total">
+                <span>Grand Total:</span>
+                <span>₹${grandTotal.toFixed(2)}</span>
+              </div>
+              <div class="total-row" style="margin-top: 8px; font-weight: 600; font-size: 12px;">
+                <span style="color: #64748b;">Amount Paid:</span>
+                <span style="color: #059669;">₹${totalPaid.toFixed(2)}</span>
+              </div>
+              <div class="total-row" style="font-weight: 700; font-size: 13px;">
+                <span style="color: #64748b;">Balance Due:</span>
+                <span style="color: #ef4444;">₹${dueAmount.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 60px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px; font-size: 11px; color: #94a3b8;">
+            Thank you for your business! Generated on ${new Date().toLocaleString()}
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   useEffect(() => {
@@ -203,6 +363,14 @@ export default function SaleDetailsPage({ params }: PageProps) {
           <div className="flex items-center gap-2.5">
             <Button
               variant="ghost"
+              onPress={handlePrintReceipt}
+              className="rounded-xl text-xs font-bold border-slate-200 text-slate-750 hover:bg-slate-50 dark:border-slate-850 dark:text-slate-300"
+            >
+              <Printer className="w-4 h-4 mr-1.5" />
+              <span>Print Invoice</span>
+            </Button>
+            <Button
+              variant="ghost"
               onPress={() => setEditOpen(true)}
               className="rounded-xl text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-850 dark:text-slate-300"
             >
@@ -229,28 +397,28 @@ export default function SaleDetailsPage({ params }: PageProps) {
       </div>
 
       {/* Header Info */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-850 p-5 rounded-2xl shadow-sm">
         <div className="flex items-center gap-3.5">
-          <div className="p-2.5 bg-emerald-600/10 rounded-xl">
-            <FileText className="w-6 h-6 text-emerald-500" />
+          <div className="p-2.5 bg-emerald-600/10 dark:bg-emerald-950/20 rounded-xl">
+            <FileText className="w-6 h-6 text-emerald-600 dark:text-emerald-450" />
           </div>
           <div className="flex flex-col">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xl font-black text-white">{sale.saleNumber}</span>
+              <span className="text-xl font-black text-slate-900 dark:text-white">{sale.saleNumber}</span>
               <SaleStatusBadge status={sale.status} />
               <SaleStatusBadge paymentStatus={sale.paymentStatus} />
             </div>
-            <span className="text-xs text-slate-400 mt-1">
+            <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Recorded at: {new Date(sale.createdAt).toLocaleString("en-IN")}
             </span>
           </div>
         </div>
 
         <div className="flex flex-col md:items-end gap-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
             Invoice Grand Total
           </span>
-          <span className="text-2xl font-black text-emerald-500">
+          <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
             ₹{grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </span>
         </div>
@@ -265,20 +433,20 @@ export default function SaleDetailsPage({ params }: PageProps) {
             <Card title="Customer Details">
               <div className="flex flex-col gap-2.5 text-sm mt-2">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Name</span>
-                  <span className="font-semibold text-slate-200">{sale.customer.name}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Name</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-50">{sale.customer.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Contact Person</span>
-                  <span className="text-slate-300">{sale.customer.contactPerson || "-"}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Contact Person</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{sale.customer.contactPerson || "-"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Phone</span>
-                  <span className="text-slate-300 font-mono">{sale.customer.phone || "-"}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Phone</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{sale.customer.phone || "-"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">GSTIN</span>
-                  <span className="text-slate-300 font-mono uppercase">{sale.customer.gstNumber || "Unregistered"}</span>
+                  <span className="text-slate-500 dark:text-slate-400">GSTIN</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono uppercase">{sale.customer.gstNumber || "Unregistered"}</span>
                 </div>
               </div>
             </Card>
@@ -286,18 +454,18 @@ export default function SaleDetailsPage({ params }: PageProps) {
             <Card title="Invoice Logistics">
               <div className="flex flex-col gap-2.5 text-sm mt-2">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Invoice Date</span>
-                  <span className="font-semibold text-slate-200">
+                  <span className="text-slate-500 dark:text-slate-400">Invoice Date</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-50">
                     {new Date(sale.saleDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Reference PO No</span>
-                  <span className="text-slate-300">{sale.reference || "-"}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Reference PO No</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{sale.reference || "-"}</span>
                 </div>
-                <div className="flex flex-col gap-0.5 pt-1.5 border-t border-slate-800">
-                  <span className="text-slate-400 text-xs">Terms & Dispatch Notes</span>
-                  <p className="text-slate-300 text-xs leading-relaxed mt-1">{sale.notes || "No special remarks logged."}</p>
+                <div className="flex flex-col gap-1.5 pt-2.5 border-t border-slate-100 dark:border-slate-850">
+                  <span className="text-slate-550 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Terms & Dispatch Notes</span>
+                  <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed mt-0.5">{sale.notes || "No special remarks logged."}</p>
                 </div>
               </div>
             </Card>
@@ -318,10 +486,10 @@ export default function SaleDetailsPage({ params }: PageProps) {
               <Truck className="w-4 h-4 text-amber-500" />
               <span>Stock Movements Audit Trail</span>
             </h3>
-            <div className="overflow-x-auto w-full rounded-xl border border-slate-800 bg-slate-900/50">
-              <table className="w-full text-left text-sm text-slate-300">
+            <div className="overflow-x-auto w-full rounded-xl border border-slate-100 dark:border-slate-850 bg-white dark:bg-slate-950/20">
+              <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
                 <thead>
-                  <tr className="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-semibold">
+                  <tr className="bg-slate-50/60 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-850 text-slate-550 dark:text-slate-400 font-bold text-xs uppercase">
                     <th className="p-3">Product</th>
                     <th className="p-3 text-right">Movement Qty</th>
                     <th className="p-3">Type</th>
@@ -329,18 +497,18 @@ export default function SaleDetailsPage({ params }: PageProps) {
                     <th className="p-3">Remarks</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/50">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-850/50">
                   {stockMovements.map((sm) => {
                     const isIncrease = Number(sm.quantity) > 0;
                     return (
-                      <tr key={sm.id} className="hover:bg-slate-900/40">
-                        <td className="p-3 font-semibold text-white">{sm.product.name}</td>
-                        <td className={`p-3 text-right font-bold ${isIncrease ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      <tr key={sm.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-900/20 transition-colors">
+                        <td className="p-3 font-bold text-slate-900 dark:text-slate-100">{sm.product.name}</td>
+                        <td className={`p-3 text-right font-black ${isIncrease ? 'text-emerald-600 dark:text-emerald-450' : 'text-rose-600 dark:text-rose-450'}`}>
                           {isIncrease ? "+" : ""}{Number(sm.quantity).toLocaleString()}
                         </td>
-                        <td className="p-3 font-semibold text-xs uppercase text-slate-400">{sm.type}</td>
-                        <td className="p-3 text-slate-400">{new Date(sm.createdAt).toLocaleString()}</td>
-                        <td className="p-3 text-slate-500 truncate max-w-[200px]" title={sm.notes || ""}>
+                        <td className="p-3 font-bold text-[10px] uppercase text-slate-500 dark:text-slate-400">{sm.type}</td>
+                        <td className="p-3 text-slate-500 dark:text-slate-400 text-xs font-semibold">{new Date(sm.createdAt).toLocaleString()}</td>
+                        <td className="p-3 text-slate-500 dark:text-slate-400 truncate max-w-[200px] text-xs font-medium" title={sm.notes || ""}>
                           {sm.notes || "-"}
                         </td>
                       </tr>
@@ -348,7 +516,7 @@ export default function SaleDetailsPage({ params }: PageProps) {
                   })}
                   {stockMovements.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-6 text-center text-slate-500">
+                      <td colSpan={5} className="p-6 text-center text-slate-400 dark:text-slate-500 font-bold uppercase text-xs tracking-wider">
                         No stock movement logs found for this invoice.
                       </td>
                     </tr>
