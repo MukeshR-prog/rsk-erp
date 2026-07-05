@@ -75,6 +75,31 @@ function PaymentsPageContent() {
   const [selectedMethod, setSelectedMethod] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [datePreset, setDatePreset] = useState<string>("all"); // "all" | "today" | "week" | "month" | "year" | "custom"
+
+  const handleDatePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    const today = dayjs();
+    if (preset === "all") {
+      setStartDate("");
+      setEndDate("");
+    } else if (preset === "today") {
+      const formatted = today.format("YYYY-MM-DD");
+      setStartDate(formatted);
+      setEndDate(formatted);
+    } else if (preset === "week") {
+      setStartDate(today.startOf("week").format("YYYY-MM-DD"));
+      setEndDate(today.endOf("week").format("YYYY-MM-DD"));
+    } else if (preset === "month") {
+      setStartDate(today.startOf("month").format("YYYY-MM-DD"));
+      setEndDate(today.endOf("month").format("YYYY-MM-DD"));
+    } else if (preset === "year") {
+      setStartDate(today.startOf("year").format("YYYY-MM-DD"));
+      setEndDate(today.endOf("year").format("YYYY-MM-DD"));
+    }
+    setPage(1);
+  };
+
   const [statusTab, setStatusTab] = useState<"ALL" | "COMPLETED" | "CANCELLED">("ALL");
 
   // Modals state
@@ -129,7 +154,7 @@ function PaymentsPageContent() {
           status: statusTab === "ALL" ? undefined : statusTab,
           paymentType: mode === "SUPPLIER" ? "SUPPLIER_PAYMENT" : "CUSTOMER_RECEIPT",
         }),
-        getPaymentDashboardMetrics(mode),
+        getPaymentDashboardMetrics(mode, startDate || undefined, endDate || undefined),
       ]);
 
       if (paymentsRes.success && paymentsRes.data) {
@@ -186,6 +211,7 @@ function PaymentsPageContent() {
     setSelectedMethod("");
     setStartDate("");
     setEndDate("");
+    setDatePreset("all");
     setStatusTab("ALL");
     setPage(1);
     router.replace("/trading/payments");
@@ -327,42 +353,75 @@ function PaymentsPageContent() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-            {/* Start Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end bg-slate-50/50 dark:bg-slate-900/30 p-4 rounded-2xl border border-slate-100 dark:border-slate-850/60 mt-1">
+            {/* Date Preset */}
             <div className="flex flex-col gap-1 w-full">
-              <label className="text-xs font-semibold text-slate-500 uppercase">From Date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm h-10"
-              />
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                Period Preset
+              </label>
+              <select
+                value={datePreset}
+                onChange={(e) => handleDatePresetChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm h-10 font-semibold"
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">Weekly (This Week)</option>
+                <option value="month">Monthly (This Month)</option>
+                <option value="year">Yearly (This Year)</option>
+                <option value="custom">Custom Date Range</option>
+              </select>
             </div>
 
-            {/* End Date */}
-            <div className="flex flex-col gap-1 w-full">
-              <label className="text-xs font-semibold text-slate-500 uppercase">To Date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm h-10"
-              />
-            </div>
+            {/* Custom Range: From & To dates */}
+            {datePreset === "custom" ? (
+              <>
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">From Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm h-10 font-semibold"
+                  />
+                </div>
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">To Date</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 outline-none text-sm h-10 font-semibold"
+                  />
+                </div>
+              </>
+            ) : datePreset !== "all" ? (
+              <div className="sm:col-span-2 text-xs font-bold text-slate-500 dark:text-slate-450 pb-2">
+                Active Filter Range: <span className="text-slate-850 dark:text-slate-200 font-extrabold">{startDate}</span> to <span className="text-slate-850 dark:text-slate-200 font-extrabold">{endDate}</span>
+              </div>
+            ) : (
+              <div className="hidden sm:block sm:col-span-2"></div>
+            )}
 
             {/* Reset / Actions */}
             <div className="flex gap-2">
               <Button
                 variant="tertiary"
                 onPress={handleClearFilters}
-                className="font-bold border border-slate-150 rounded-xl flex-1"
+                className="font-bold border border-slate-150 rounded-xl flex-1 h-10"
               >
                 Clear Filters
               </Button>
               <Button
                 variant="tertiary"
                 onPress={fetchDashboardData}
-                className="font-bold border border-slate-150 rounded-xl"
+                className="font-bold border border-slate-150 rounded-xl h-10"
                 aria-label="Refresh logs"
               >
                 <RefreshCcw className="w-4.5 h-4.5" />

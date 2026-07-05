@@ -371,15 +371,35 @@ export const DashboardService = {
   /**
    * Calculates metrics for the Purchases Dashboard.
    */
-  async getPurchaseMetrics() {
+  async getPurchaseMetrics(startDate?: string, endDate?: string) {
     const today = new Date();
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
+    const whereAll: Prisma.PurchaseWhereInput = { status: "COMPLETED" };
+    const wherePending: Prisma.PurchaseWhereInput = {
+      status: "COMPLETED",
+      paymentStatus: { in: ["UNPAID", "PARTIALLY_PAID"] },
+    };
+
+    if (startDate || endDate) {
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (startDate) {
+        dateFilter.gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.lte = end;
+      }
+      whereAll.purchaseDate = dateFilter;
+      wherePending.purchaseDate = dateFilter;
+    }
+
     const [allCompleted, todayCompleted, pendingPayments] = await Promise.all([
       // 1. Total Purchases
       prisma.purchase.aggregate({
-        where: { status: "COMPLETED" },
+        where: whereAll,
         _sum: { grandTotal: true },
       }),
       // 2. Today's Purchases
@@ -392,10 +412,7 @@ export const DashboardService = {
       }),
       // 3. Pending Payments
       prisma.purchase.aggregate({
-        where: {
-          status: "COMPLETED",
-          paymentStatus: { in: ["UNPAID", "PARTIALLY_PAID"] },
-        },
+        where: wherePending,
         _sum: { grandTotal: true },
       }),
     ]);

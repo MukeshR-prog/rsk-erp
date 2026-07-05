@@ -509,7 +509,11 @@ export async function getPendingCustomerSales(customerId: string) {
 /**
  * Fetch KPI metrics for the Payments Dashboard (Supplier or Customer).
  */
-export async function getPaymentDashboardMetrics(type: "SUPPLIER" | "CUSTOMER" = "SUPPLIER") {
+export async function getPaymentDashboardMetrics(
+  type: "SUPPLIER" | "CUSTOMER" = "SUPPLIER",
+  startDate?: string,
+  endDate?: string
+) {
   try {
     const today = new Date();
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
@@ -532,25 +536,59 @@ export async function getPaymentDashboardMetrics(type: "SUPPLIER" | "CUSTOMER" =
       },
     });
 
-    // 2. Total Paid/Collected
+    // 2. Total Paid/Collected in range
+    const whereTotal: any = {
+      paymentType,
+      status: "COMPLETED",
+    };
+
+    if (startDate) {
+      whereTotal.paymentDate = {
+        ...whereTotal.paymentDate,
+        gte: new Date(startDate),
+      };
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      whereTotal.paymentDate = {
+        ...whereTotal.paymentDate,
+        lte: end,
+      };
+    }
+
     const totalPayments = await prisma.payment.aggregate({
-      where: {
-        paymentType,
-        status: "COMPLETED",
-      },
+      where: whereTotal,
       _sum: {
         amount: true,
       },
     });
 
     if (type === "SUPPLIER") {
-      const pendingBillsCount = await prisma.purchase.count({
-        where: {
-          status: "COMPLETED",
-          paymentStatus: {
-            in: ["UNPAID", "PARTIALLY_PAID"],
-          },
+      const wherePurchase: any = {
+        status: "COMPLETED",
+        paymentStatus: {
+          in: ["UNPAID", "PARTIALLY_PAID"],
         },
+      };
+
+      if (startDate) {
+        wherePurchase.purchaseDate = {
+          ...wherePurchase.purchaseDate,
+          gte: new Date(startDate),
+        };
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        wherePurchase.purchaseDate = {
+          ...wherePurchase.purchaseDate,
+          lte: end,
+        };
+      }
+
+      const pendingBillsCount = await prisma.purchase.count({
+        where: wherePurchase,
       });
 
       const suppliers = await prisma.contact.findMany({
@@ -581,13 +619,30 @@ export async function getPaymentDashboardMetrics(type: "SUPPLIER" | "CUSTOMER" =
         },
       };
     } else {
-      const pendingBillsCount = await prisma.sale.count({
-        where: {
-          status: "COMPLETED",
-          paymentStatus: {
-            in: ["UNPAID", "PARTIALLY_PAID"],
-          },
+      const whereSale: any = {
+        status: "COMPLETED",
+        paymentStatus: {
+          in: ["UNPAID", "PARTIALLY_PAID"],
         },
+      };
+
+      if (startDate) {
+        whereSale.saleDate = {
+          ...whereSale.saleDate,
+          gte: new Date(startDate),
+        };
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        whereSale.saleDate = {
+          ...whereSale.saleDate,
+          lte: end,
+        };
+      }
+
+      const pendingBillsCount = await prisma.sale.count({
+        where: whereSale,
       });
 
       const customers = await prisma.contact.findMany({

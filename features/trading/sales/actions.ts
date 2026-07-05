@@ -58,10 +58,15 @@ export async function getSaleDetailsAction(id: string) {
       transportCharges: Number(raw.transportCharges),
       subtotal: Number(raw.subtotal),
       grandTotal: Number(raw.grandTotal),
+      customer: raw.customer ? {
+        ...raw.customer,
+        openingBalance: Number(raw.customer.openingBalance),
+        creditLimit: raw.customer.creditLimit ? Number(raw.customer.creditLimit) : null,
+      } : null,
       items: (raw.items || []).map((item: any) => ({
         ...item,
         quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice ?? 0),
+        sellingRate: Number(item.sellingRate),
         discount: Number(item.discount ?? 0),
         lineTotal: Number(item.lineTotal ?? 0),
       })),
@@ -226,7 +231,13 @@ export async function getSaleStockMovementsAction(saleId: string) {
       },
       orderBy: { createdAt: "desc" },
     });
-    return { success: true, data };
+    return {
+      success: true,
+      data: data.map((sm) => ({
+        ...sm,
+        quantity: Number(sm.quantity),
+      })),
+    };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to fetch stock movements." };
   }
