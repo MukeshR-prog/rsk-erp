@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -12,10 +12,15 @@ import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const [isVisible, setIsVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const toggleVisibility = () => setIsVisible(!isVisible);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const {
     register,
@@ -41,7 +46,7 @@ export default function LoginPage() {
         toast.error("Invalid email or password");
       } else {
         toast.success("Welcome back! Redirecting...");
-        router.push("/");
+        router.push("/workspace");
         router.refresh();
       }
     } catch (err) {
@@ -51,6 +56,17 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 dark:bg-slate-955">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-slate-350 border-t-slate-900 dark:border-slate-800 dark:border-t-slate-100 animate-spin" />
+          <span className="text-xs text-slate-500 font-semibold tracking-wider uppercase">Loading Login Form...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 dark:bg-slate-950">

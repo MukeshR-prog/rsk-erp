@@ -349,13 +349,14 @@ export default function PurchasesPage() {
       default:
         return <span>{String(item[columnKey])}</span>;
     }
-  };
-
-  const renderMobileCard = (item: any) => {
+  };  const renderMobileCard = (item: any) => {
     const isExpanded = expandedRows[item.id];
     return (
-      <div key={item.id} className="flex flex-col gap-3">
-        <div className="flex justify-between items-start">
+      <div key={item.id} className="flex flex-col gap-3 bg-white dark:bg-slate-955 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 shadow-xs animate-fadeIn">
+        <div
+          onClick={() => toggleRow(item.id)}
+          className="flex justify-between items-start cursor-pointer"
+        >
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               {item.supplierName}
@@ -374,17 +375,17 @@ export default function PurchasesPage() {
 
         {isExpanded && item.items && item.items.length > 0 && (
           <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 text-[11px] flex flex-col gap-1.5 mt-1">
-            <span className="font-bold text-slate-500 uppercase text-[9px] tracking-wider mb-1">Items:</span>
+            <span className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[9px] tracking-wider mb-1">Items Bought:</span>
             {item.items.map((it: any) => (
-              <div key={it.id} className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-1 last:border-0 last:pb-0">
+              <div key={it.id} className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/40 pb-1 last:border-0 last:pb-0">
                 <span className="font-semibold text-slate-850 dark:text-slate-200">{it.productName}</span>
-                <span className="text-slate-500 font-semibold">{it.quantity} {it.unitName} × ₹{it.purchaseRate}</span>
+                <span className="text-slate-500 dark:text-slate-450 font-semibold">{it.quantity} {it.unitName || "Bxs"} × ₹{it.purchaseRate}</span>
               </div>
             ))}
           </div>
         )}
 
-        <div className="flex justify-between items-center border-t border-slate-50 dark:border-slate-900 pt-2 mt-1">
+        <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-2 mt-1">
           <div className="flex gap-2">
             <span
               className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -412,20 +413,17 @@ export default function PurchasesPage() {
 
           <div className="flex gap-3">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleRow(item.id);
-              }}
-              className="text-xs font-bold text-slate-500 hover:text-slate-750"
+              onClick={() => toggleRow(item.id)}
+              className="text-xs font-bold text-blue-600 hover:underline"
             >
-              {isExpanded ? "Hide Items" : "Show Items"}
+              {isExpanded ? "Hide items" : "Show items"}
             </button>
             <Link
               href={`/trading/purchases/${item.id}`}
-              className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1"
+              className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800"
             >
               <span>Report</span>
-              <ChevronRight className="w-3 h-3" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>

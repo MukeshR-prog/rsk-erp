@@ -36,7 +36,18 @@ export async function createStockAdjustmentAction(rawData: any) {
     revalidatePath("/manufacturing/stock");
     revalidatePath("/trading");
     revalidatePath("/manufacturing");
-    return { success: true, data: result };
+    return {
+      success: true,
+      data: {
+        ...result,
+        currentStock: Number(result.currentStock),
+        averageCost: Number(result.averageCost),
+        purchasePrice: result.purchasePrice ? Number(result.purchasePrice) : null,
+        sellingPrice: result.sellingPrice ? Number(result.sellingPrice) : null,
+        minStockAlert: result.minStockAlert ? Number(result.minStockAlert) : null,
+        gstRate: result.gstRate ? Number(result.gstRate) : null,
+      },
+    };
   } catch (error: any) {
     console.error("createStockAdjustmentAction failed:", error);
     return { success: false, error: error.message || "Failed to make stock adjustment" };
