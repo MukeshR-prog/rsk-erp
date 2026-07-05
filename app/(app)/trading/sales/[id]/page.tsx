@@ -506,7 +506,9 @@ export default function SaleDetailsPage({ params }: PageProps) {
                         <td className={`p-3 text-right font-black ${isIncrease ? 'text-emerald-600 dark:text-emerald-450' : 'text-rose-600 dark:text-rose-450'}`}>
                           {isIncrease ? "+" : ""}{Number(sm.quantity).toLocaleString()}
                         </td>
-                        <td className="p-3 font-bold text-[10px] uppercase text-slate-500 dark:text-slate-400">{sm.type}</td>
+                        <td className="p-3 font-bold text-[10px] uppercase text-slate-500 dark:text-slate-400">
+                          {sm.type === "PRODUCTION_OUTPUT" ? "MANUFACTURED" : sm.type}
+                        </td>
                         <td className="p-3 text-slate-500 dark:text-slate-400 text-xs font-semibold">{new Date(sm.createdAt).toLocaleString()}</td>
                         <td className="p-3 text-slate-500 dark:text-slate-400 truncate max-w-[200px] text-xs font-medium" title={sm.notes || ""}>
                           {sm.notes || "-"}

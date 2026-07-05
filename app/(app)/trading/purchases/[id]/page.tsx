@@ -307,7 +307,7 @@ export default function PurchaseDetailsPage({ params }: PageProps) {
                         {sm.productName}
                       </span>
                       <span className="text-[10px] text-slate-450 dark:text-slate-550 uppercase">
-                        {sm.type} • {new Date(sm.createdAt).toLocaleString()}
+                        {sm.type === "PRODUCTION_OUTPUT" ? "MANUFACTURED" : sm.type} • {new Date(sm.createdAt).toLocaleString()}
                       </span>
                       {sm.notes && <span className="text-[10px] text-red-500 mt-0.5">{sm.notes}</span>}
                     </div>

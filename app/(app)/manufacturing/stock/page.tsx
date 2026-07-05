@@ -6,7 +6,7 @@ import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
 import { Search, AlertTriangle, CheckCircle, Package } from "lucide-react";
 import toast from "react-hot-toast";
-import { getProducts } from "@/features/master-data/products/actions";
+import { getCentralizedStockAction } from "@/features/inventory/actions";
 import { Button } from "@heroui/react";
 
 interface ProductStockData {
@@ -14,10 +14,15 @@ interface ProductStockData {
   code: string;
   name: string;
   type: string;
+  color?: string | null;
+  volumeMl?: string | null;
   currentStock: number;
   minStockAlert?: number | null;
   piecesPerBox?: number | null;
   isActive: boolean;
+  totalManufactured: number;
+  totalPurchased: number;
+  totalSold: number;
   unit?: {
     name: string;
   } | null;
@@ -33,18 +38,19 @@ function StockPageContent() {
 
   const loadStock = () => {
     startTransition(async () => {
-      const res = await getProducts({
+      const res = await getCentralizedStockAction({
         search,
         page,
         pageSize: 10,
-        showInactive: false,
-        type: "FINISHED_GOOD",
+        type: "ALL", // Centralized Stock: fetches both FINISHED_GOOD and TRADING_PRODUCT
       });
 
       if (res.success && res.data) {
         setStockList(res.data as any);
-        setTotal(res.meta.total);
-        setTotalPages(res.meta.totalPages);
+        if (res.meta) {
+          setTotal(res.meta.total);
+          setTotalPages(res.meta.totalPages);
+        }
       } else {
         toast.error(res.error || "Failed to load stock data");
       }
@@ -62,12 +68,15 @@ function StockPageContent() {
   };
 
   const tableHeaders = [
-    { key: "code", label: "SKU / Code" },
     { key: "name", label: "Product Name" },
-    { key: "boxes", label: "Available Boxes", className: "text-right" },
+    { key: "color", label: "Color" },
+    { key: "volumeMl", label: "Size (ML)" },
     { key: "piecesPerBox", label: "Pieces / Box", className: "text-right" },
+    { key: "totalManufactured", label: "Total Manufactured", className: "text-right" },
+    { key: "totalPurchased", label: "Total Purchased", className: "text-right" },
+    { key: "totalSold", label: "Total Sold", className: "text-right" },
+    { key: "boxes", label: "Available Boxes", className: "text-right" },
     { key: "pieces", label: "Available Pieces", className: "text-right" },
-    { key: "minAlert", label: "Safety Alert Limit", className: "text-right" },
     { key: "status", label: "Stock Status", className: "w-36 text-right" },
   ];
 
@@ -77,14 +86,22 @@ function StockPageContent() {
     const isLow = item.minStockAlert !== null && item.minStockAlert !== undefined && item.currentStock <= item.minStockAlert;
 
     switch (columnKey) {
+      case "color":
+        return <span className="font-semibold text-slate-705 dark:text-slate-300">{item.color || "—"}</span>;
+      case "volumeMl":
+        return <span className="font-semibold text-slate-705 dark:text-slate-300">{item.volumeMl ? `${item.volumeMl} ML` : "—"}</span>;
+      case "totalManufactured":
+        return <span className="font-bold text-slate-705 dark:text-slate-300">{item.totalManufactured.toLocaleString()} Bxs</span>;
+      case "totalPurchased":
+        return <span className="font-bold text-slate-705 dark:text-slate-300">{item.totalPurchased.toLocaleString()} Bxs</span>;
+      case "totalSold":
+        return <span className="font-bold text-slate-705 dark:text-slate-300">{item.totalSold.toLocaleString()} Bxs</span>;
       case "boxes":
         return <span className="font-bold text-slate-900 dark:text-slate-100">{item.currentStock.toLocaleString()} Bxs</span>;
       case "piecesPerBox":
         return <span className="font-semibold text-slate-400">{piecesPerBox.toLocaleString()}</span>;
       case "pieces":
         return <span className="font-extrabold text-emerald-600">{totalPieces.toLocaleString()} Pcs</span>;
-      case "minAlert":
-        return <span className="font-semibold text-slate-500">{item.minStockAlert !== null ? `${item.minStockAlert} Bxs` : "—"}</span>;
       case "status":
         return (
           <div className="flex justify-end">
@@ -112,11 +129,11 @@ function StockPageContent() {
     const isLow = item.minStockAlert !== null && item.minStockAlert !== undefined && item.currentStock <= item.minStockAlert;
 
     return (
-      <div className="flex flex-col gap-2.5 w-full">
+      <div key={item.id} className="flex flex-col gap-2.5 w-full bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-850">
         <div className="flex justify-between items-start">
           <div className="flex flex-col">
             <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
-              {item.code}
+              {item.code} {item.color ? `• ${item.color}` : ""} {item.volumeMl ? `• ${item.volumeMl} ML` : ""}
             </span>
             <span className="font-bold text-slate-900 dark:text-slate-50 text-base">{item.name}</span>
           </div>
@@ -134,17 +151,20 @@ function StockPageContent() {
         </div>
 
         <div className="grid grid-cols-2 gap-y-2 gap-x-4 border-t border-slate-100 dark:border-slate-850 pt-2.5 mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-          <div>Boxes: <span className="font-bold text-slate-800 dark:text-slate-200">{item.currentStock.toLocaleString()} Bxs</span></div>
+          <div>Manufactured: <span className="font-bold text-slate-800 dark:text-slate-200">{item.totalManufactured.toLocaleString()} Bxs</span></div>
+          <div>Purchased: <span className="font-bold text-slate-800 dark:text-slate-200">{item.totalPurchased.toLocaleString()} Bxs</span></div>
+          <div>Sold: <span className="font-bold text-slate-800 dark:text-slate-200">{item.totalSold.toLocaleString()} Bxs</span></div>
           <div>Pieces/Box: <span className="font-semibold">{piecesPerBox.toLocaleString()}</span></div>
-          <div className="col-span-2 border-t border-slate-50 dark:border-slate-900 pt-2 flex justify-between items-center text-sm">
-            <span className="text-slate-400 text-xs">Total Pieces:</span>
-            <span className="font-extrabold text-emerald-600">{totalPieces.toLocaleString()} Pcs</span>
-          </div>
-          {item.minStockAlert !== null && (
-            <div className="col-span-2 text-[10px] text-slate-400 italic">
-              Safety alert threshold is set to {item.minStockAlert} Boxes.
+          <div className="col-span-2 border-t border-slate-50 dark:border-slate-900 pt-2 flex justify-between items-center text-sm font-semibold">
+            <div className="flex flex-col">
+              <span className="text-slate-400 text-xs">Available Boxes:</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">{item.currentStock.toLocaleString()} Bxs</span>
             </div>
-          )}
+            <div className="flex flex-col items-end">
+              <span className="text-slate-400 text-xs">Available Pieces:</span>
+              <span className="font-extrabold text-emerald-600">{totalPieces.toLocaleString()} Pcs</span>
+            </div>
+          </div>
         </div>
       </div>
     );

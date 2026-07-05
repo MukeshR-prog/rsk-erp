@@ -15,6 +15,7 @@ export const saleSchema = z.object({
   notes: z.string().optional().nullable(),
   discount: z.number().min(0, "Discount must be non-negative").default(0),
   transportCharges: z.number().min(0, "Transport charges must be non-negative").default(0),
+  initialAmountPaid: z.number().min(0, "Initial payment must be non-negative").optional().default(0),
   status: z.enum(["DRAFT", "COMPLETED", "CANCELLED"]).default("COMPLETED"),
   items: z
     .array(saleItemSchema)

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Plus,
   Search,
@@ -10,6 +11,7 @@ import {
   Calendar,
   User,
   ChevronRight,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@heroui/react";
 import toast from "react-hot-toast";
@@ -50,6 +52,15 @@ export default function SalesPage() {
   // Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
+
+  // Accordion State
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const toggleRow = (id: string) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   // Fetch Page Data
   const loadData = async () => {
@@ -183,26 +194,60 @@ export default function SalesPage() {
   };
 
   const renderMobileCard = (item: any) => {
+    const isExpanded = expandedRows[item.id];
     return (
-      <div className="flex flex-col gap-3">
-        <div className="flex justify-between items-start">
-          <div className="flex flex-col">
+      <div key={item.id} className="flex flex-col gap-3 bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 shadow-xs">
+        <div
+          onClick={() => toggleRow(item.id)}
+          className="flex justify-between items-start cursor-pointer"
+        >
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              {item.customer?.name}
+            </span>
             <span className="font-bold text-slate-900 dark:text-slate-50">{item.saleNumber}</span>
-            <span className="text-xs text-slate-500">{item.customer?.name}</span>
           </div>
-          <span className="font-black text-slate-900 dark:text-slate-50">
-            ₹{Number(item.grandTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-          </span>
+          <div className="text-right">
+            <span className="font-extrabold text-slate-900 dark:text-slate-50 block">
+              ₹{Number(item.grandTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            </span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">
+              {new Date(item.saleDate).toLocaleDateString()}
+            </span>
+          </div>
         </div>
+
         <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span className="text-xs text-slate-500">
-            {new Date(item.saleDate).toLocaleDateString()}
-          </span>
           <div className="flex gap-2">
             <SaleStatusBadge status={item.status} />
             <SaleStatusBadge paymentStatus={item.paymentStatus} />
           </div>
+          <button
+            type="button"
+            onClick={() => toggleRow(item.id)}
+            className="text-xs font-bold text-blue-600 hover:underline"
+          >
+            {isExpanded ? "Hide items" : "Show items"}
+          </button>
         </div>
+
+        {isExpanded && item.items && item.items.length > 0 && (
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 text-[11px] flex flex-col gap-1.5 mt-1">
+            <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] mb-0.5">
+              Items Sold:
+            </span>
+            {item.items.map((it: any) => (
+              <div key={it.id} className="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800/40 last:border-b-0">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  {it.productName}
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  {it.quantity} Bxs • ₹{Number(it.lineTotal).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -311,20 +356,177 @@ export default function SalesPage() {
               </span>
             </div>
           ) : (
-            <Table
-              headers={headers}
-              data={sales}
-              renderCell={renderCell}
-              renderMobileCard={renderMobileCard}
-              keyField="id"
-              onRowClick={(item) => router.push(`/trading/sales/${item.id}`)}
-              emptyState={
-                <EmptyState
-                  title="No Sales Invoices Registered"
-                  description="Start by creating a new invoice estimate or completed sale."
-                />
-              }
-            />
+            <div className="w-full">
+              {/* Mobile View */}
+              <div className="flex flex-col gap-4.5 md:hidden">
+                {sales.length === 0 ? (
+                  <EmptyState
+                    title="No Sales Invoices Registered"
+                    description="Start by creating a new invoice estimate or completed sale."
+                  />
+                ) : (
+                  sales.map((item) => renderMobileCard(item))
+                )}
+              </div>
+
+              {/* Desktop View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full border-collapse border border-slate-100 dark:border-slate-900 rounded-2xl bg-white dark:bg-slate-950 overflow-hidden shadow-sm">
+                  <thead>
+                    <tr className="bg-slate-50/60 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-bold uppercase text-[11px]">
+                      <th className="py-3.5 px-4 text-left w-10"></th>
+                      <th className="py-3.5 px-4 text-left">Invoice No</th>
+                      <th className="py-3.5 px-4 text-left">Customer</th>
+                      <th className="py-3.5 px-4 text-left">Date</th>
+                      <th className="py-3.5 px-4 text-right">Total Amount</th>
+                      <th className="py-3.5 px-4 text-center">Status</th>
+                      <th className="py-3.5 px-4 text-center">Payment Status</th>
+                      <th className="py-3.5 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-slate-500">
+                          <EmptyState
+                            title="No Sales Invoices Registered"
+                            description="Start by creating a new invoice estimate or completed sale."
+                          />
+                        </td>
+                      </tr>
+                    ) : (
+                      sales.map((item) => {
+                        const isExpanded = expandedRows[item.id];
+                        return (
+                          <React.Fragment key={item.id}>
+                            <tr
+                              onClick={() => toggleRow(item.id)}
+                              className="border-b border-slate-50 dark:border-slate-900 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors cursor-pointer"
+                            >
+                              <td className="py-4 px-4 text-center">
+                                <button
+                                  type="button"
+                                  className="text-slate-400 hover:text-slate-600 transition-transform duration-200"
+                                  style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleRow(item.id);
+                                  }}
+                                >
+                                  <ChevronRight className="w-4 h-4" />
+                                </button>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="p-2 bg-emerald-500/10 rounded-xl">
+                                    <FileText className="w-5 h-5 text-emerald-500" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-slate-900 dark:text-white">
+                                      {item.saleNumber}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">
+                                      Ref: {item.reference || "None"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-slate-400" />
+                                  <span className="font-semibold text-slate-700 dark:text-slate-350">
+                                    {item.customer?.name}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium">
+                                  <Calendar className="w-4 h-4 text-slate-450" />
+                                  <span>{new Date(item.saleDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-4 text-right font-extrabold text-slate-900 dark:text-white">
+                                ₹{Number(item.grandTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="py-4 px-4 text-center">
+                                <SaleStatusBadge status={item.status} />
+                              </td>
+                              <td className="py-4 px-4 text-center">
+                                <SaleStatusBadge paymentStatus={item.paymentStatus} />
+                              </td>
+                              <td className="py-4 px-4 text-right">
+                                <Link
+                                  href={`/trading/sales/${item.id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 text-slate-900 hover:text-slate-700 dark:text-white dark:hover:text-slate-300 font-extrabold text-xs bg-slate-100 dark:bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors"
+                                >
+                                  <span>Report</span>
+                                  <ArrowRight className="w-3 h-3" />
+                                </Link>
+                              </td>
+                            </tr>
+                            {isExpanded && (
+                              <tr className="bg-slate-50/30 dark:bg-slate-900/10">
+                                <td colSpan={8} className="p-0">
+                                  <div className="px-12 py-4 bg-slate-50/50 dark:bg-slate-950/20 border-b border-slate-100 dark:border-slate-900">
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">
+                                      Items Sold to Customer:
+                                    </h4>
+                                    <table className="w-full text-xs text-left border-collapse">
+                                      <thead>
+                                        <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase text-[10px]">
+                                          <th className="pb-2 font-bold">Product Name</th>
+                                          <th className="pb-2 font-bold text-right">Quantity Sold</th>
+                                          <th className="pb-2 font-bold text-right">Selling Rate</th>
+                                          <th className="pb-2 font-bold text-right">Discount</th>
+                                          <th className="pb-2 font-bold text-right">Total</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {item.items && item.items.length > 0 ? (
+                                          item.items.map((it: any) => (
+                                            <tr
+                                              key={it.id}
+                                              className="border-b border-slate-100 dark:border-slate-800/50 last:border-b-0"
+                                            >
+                                              <td className="py-2.5 font-bold text-slate-900 dark:text-slate-100">
+                                                {it.productName}
+                                              </td>
+                                              <td className="py-2.5 text-right font-bold text-slate-800 dark:text-slate-200">
+                                                {it.quantity} Bxs
+                                              </td>
+                                              <td className="py-2.5 text-right text-slate-600 dark:text-slate-400 font-semibold">
+                                                ₹{Number(it.sellingRate).toFixed(2)}
+                                              </td>
+                                              <td className="py-2.5 text-right text-slate-500 dark:text-slate-450 font-semibold">
+                                                ₹{Number(it.discount).toFixed(2)}
+                                              </td>
+                                              <td className="py-2.5 text-right font-black text-slate-900 dark:text-white">
+                                                ₹{Number(it.lineTotal).toFixed(2)}
+                                              </td>
+                                            </tr>
+                                          ))
+                                        ) : (
+                                          <tr>
+                                            <td colSpan={5} className="py-3 text-center text-slate-400 italic font-semibold">
+                                              No details logged.
+                                            </td>
+                                          </tr>
+                                        )}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {/* Pagination */}

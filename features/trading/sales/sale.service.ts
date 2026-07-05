@@ -73,7 +73,7 @@ export const SaleService = {
 
       if (available.lessThan(requested)) {
         throw new Error(
-          `Insufficient stock for product "${product.name}". Available: ${available.toString()}, Requested: ${requested.toString()}`
+          `Insufficient stock for product "${product.name}". Available: ${available.toString()} Boxes, Requested: ${requested.toString()} Boxes`
         );
       }
     }
@@ -206,6 +206,34 @@ export const SaleService = {
           `Sale Invoice: ${saleNumber}`
         );
       }
+    }
+
+    // 7. Record initial payment if provided
+    const initialPaid = data.initialAmountPaid || 0;
+    if (initialPaid > 0 && data.status === "COMPLETED") {
+      const paymentNumber = await NumberGeneratorService.generateNumber("PAY", tx);
+      await tx.payment.create({
+        data: {
+          paymentNumber,
+          contactId: data.customerId,
+          saleId: sale.id,
+          amount: new Prisma.Decimal(initialPaid),
+          paymentDate: data.saleDate,
+          paymentMethod: "CASH",
+          paymentType: "CUSTOMER_RECEIPT",
+          notes: "Initial payment recorded at invoice creation",
+          status: "COMPLETED",
+        },
+      });
+
+      // Update payment status
+      const grandTotalNum = Number(grandTotal);
+      const newPaymentStatus: SalePaymentStatus =
+        initialPaid >= grandTotalNum ? "PAID" : "PARTIALLY_PAID";
+      await tx.sale.update({
+        where: { id: sale.id },
+        data: { paymentStatus: newPaymentStatus },
+      });
     }
 
     return sale;
@@ -424,6 +452,13 @@ export const SaleService = {
           customer: {
             select: { name: true },
           },
+          items: {
+            include: {
+              product: {
+                select: { name: true },
+              },
+            },
+          },
         },
       }),
       prisma.sale.count({ where }),
@@ -446,6 +481,14 @@ export const SaleService = {
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
         customer: item.customer,
+        items: item.items.map((it: any) => ({
+          id: it.id,
+          productName: it.product?.name || "Product",
+          quantity: Number(it.quantity),
+          sellingRate: Number(it.sellingRate),
+          discount: Number(it.discount),
+          lineTotal: Number(it.lineTotal),
+        })),
       })),
       total,
       pages: Math.ceil(total / limit),
