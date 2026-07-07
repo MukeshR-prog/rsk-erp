@@ -53,21 +53,28 @@ export default function ReportsPageContent() {
       value: `₹${reportData.summary.totalExpenses.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
       subtitle: "Manufacturing direct costs",
       icon: TrendingDown,
-      textColor: "text-red-650 dark:text-red-400"
+      textColor: "text-red-655 dark:text-red-400"
+    },
+    {
+      title: "Estimated Yield Value",
+      value: `₹${(reportData.summary.totalProductionValue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+      subtitle: "Estimated yield market value",
+      icon: Package,
+      textColor: "text-blue-600 dark:text-blue-400"
+    },
+    {
+      title: "Manufacturing Net Profit",
+      value: `₹${(reportData.summary.netProfit || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+      subtitle: "Yield value - direct expenses",
+      icon: Factory,
+      textColor: (reportData.summary.netProfit || 0) >= 0 ? "text-emerald-650 dark:text-emerald-400" : "text-red-650 dark:text-red-450"
     },
     {
       title: "Boxes Produced",
       value: `${reportData.summary.totalBoxesProduced.toLocaleString()} Boxes`,
       subtitle: "Log volume yield",
       icon: Factory,
-      textColor: "text-emerald-600 dark:text-emerald-400"
-    },
-    {
-      title: "Total Pieces",
-      value: `${reportData.summary.totalPiecesProduced.toLocaleString()} Pcs`,
-      subtitle: "Estimated unit yield",
-      icon: Package,
-      textColor: "text-blue-600 dark:text-blue-400"
+      textColor: "text-slate-700 dark:text-slate-300"
     }
   ] : [];
 
@@ -92,8 +99,8 @@ export default function ReportsPageContent() {
               onClick={() => setActiveTab(t.key as any)}
               className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 ${
                 activeTab === t.key
-                  ? "bg-slate-900 text-white dark:bg-slate-55 dark:text-slate-950 shadow-sm font-black"
-                  : "text-slate-655 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+                  ? "bg-slate-900 text-white dark:bg-slate-55 dark:text-slate-955 shadow-sm font-black"
+                  : "text-slate-655 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-205"
               }`}
             >
               {t.label}
@@ -110,7 +117,7 @@ export default function ReportsPageContent() {
       ) : (
         <div className="flex flex-col gap-6">
           {/* KPI summaries */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {kpis.map((kpi) => {
               const Icon = kpi.icon;
               return (
@@ -140,12 +147,14 @@ export default function ReportsPageContent() {
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis dataKey="label" stroke="#94a3b8" />
-                    <YAxis yAxisId="left" orientation="left" stroke="#ef4444" label={{ value: "Expenses (₹)", angle: -90, position: "insideLeft", style: { textAnchor: "middle", fill: "#94a3b8" } }} />
-                    <YAxis yAxisId="right" orientation="right" stroke="#10b981" label={{ value: "Boxes Produced", angle: 90, position: "insideRight", style: { textAnchor: "middle", fill: "#94a3b8" } }} />
-                    <Tooltip contentStyle={{ borderRadius: "16px", fontWeight: "bold" }} />
+                    <YAxis yAxisId="left" orientation="left" stroke="#64748b" label={{ value: "Amount (₹)", angle: -90, position: "insideLeft", style: { textAnchor: "middle", fill: "#94a3b8" } }} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" label={{ value: "Boxes Produced", angle: 90, position: "insideRight", style: { textAnchor: "middle", fill: "#94a3b8" } }} />
+                    <Tooltip contentStyle={{ borderRadius: "16px", fontWeight: "bold" }} formatter={(value, name) => name === "Production (Boxes)" ? `${value} Boxes` : `₹${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`} />
                     <Legend />
                     <Bar yAxisId="left" dataKey="expenses" name="Direct Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                    <Bar yAxisId="right" dataKey="boxes" name="Production (Boxes)" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="left" dataKey="estimatedValue" name="Yield Value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="left" dataKey="profit" name="Net Profit" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="right" dataKey="boxes" name="Production (Boxes)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

@@ -22,6 +22,7 @@ const productionSchema = z.object({
   productId: z.string().min(1, "Product is required"),
   boxesProduced: z.number().positive("Boxes produced must be greater than zero"),
   piecesPerBox: z.number().int().positive("Pieces per box must be a positive integer"),
+  estimatedRate: z.number().nonnegative("Estimated rate must be positive or zero").default(0.0),
   notes: z.string().nullable().optional(),
   productionDate: z.preprocess((val) => new Date(val as string), z.date()),
 });
@@ -122,6 +123,7 @@ export async function createProductionEntryAction(rawData: any) {
         ...entry,
         boxesProduced: Number(entry.boxesProduced),
         totalPieces: Number(entry.totalPieces),
+        estimatedRate: Number((entry as any).estimatedRate || 0.0),
       },
     };
   } catch (error: any) {
@@ -145,6 +147,7 @@ export async function updateProductionEntryAction(rawData: any) {
         ...entry,
         boxesProduced: Number(entry.boxesProduced),
         totalPieces: Number(entry.totalPieces),
+        estimatedRate: Number((entry as any).estimatedRate || 0.0),
       },
     };
   } catch (error: any) {
