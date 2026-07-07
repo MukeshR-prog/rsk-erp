@@ -37,6 +37,7 @@ interface ProductionData {
   boxesProduced: number;
   piecesPerBox: number;
   totalPieces: number;
+  estimatedRate: number;
   productionDate: string;
   notes?: string | null;
   product: {
@@ -66,7 +67,7 @@ function ProductionPageContent() {
   const [selectedProductFilter, setSelectedProductFilter] = useState("ALL");
   const [isPending, startTransition] = useTransition();
 
-  // Form Modal States
+  // Form Form Modal States
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<ProductionData | null>(null);
   const [formPending, setFormPending] = useState(false);
@@ -88,6 +89,7 @@ function ProductionPageContent() {
       productId: "",
       boxesProduced: 0,
       piecesPerBox: 1000,
+      estimatedRate: 0.0,
       notes: "",
       productionDate: dayjs().format("YYYY-MM-DD"),
     },
@@ -96,8 +98,10 @@ function ProductionPageContent() {
   const watchedProductId = watch("productId");
   const watchedBoxesProduced = watch("boxesProduced");
   const watchedPiecesPerBox = watch("piecesPerBox");
+  const watchedEstimatedRate = watch("estimatedRate");
 
   const [computedTotalPieces, setComputedTotalPieces] = useState(0);
+  const [computedTotalValue, setComputedTotalValue] = useState(0);
 
   // Autofill piecesPerBox when product changes
   useEffect(() => {
@@ -115,6 +119,13 @@ function ProductionPageContent() {
     const pieces = Number(watchedPiecesPerBox || 0);
     setComputedTotalPieces(boxes * pieces);
   }, [watchedBoxesProduced, watchedPiecesPerBox]);
+
+  // Recalculate computed total value
+  useEffect(() => {
+    const boxes = Number(watchedBoxesProduced || 0);
+    const rate = Number(watchedEstimatedRate || 0);
+    setComputedTotalValue(boxes * rate);
+  }, [watchedBoxesProduced, watchedEstimatedRate]);
 
   const loadProducts = async () => {
     const res = await getProductionProductsAction();
@@ -169,6 +180,7 @@ function ProductionPageContent() {
       setValue("productId", entry.productId);
       setValue("boxesProduced", entry.boxesProduced);
       setValue("piecesPerBox", entry.piecesPerBox);
+      setValue("estimatedRate", entry.estimatedRate || 0.0);
       setValue("notes", entry.notes || "");
       setValue("productionDate", dayjs(entry.productionDate).format("YYYY-MM-DD"));
     } else {
@@ -176,6 +188,7 @@ function ProductionPageContent() {
         productId: products[0]?.id || "",
         boxesProduced: "",
         piecesPerBox: products[0]?.piecesPerBox || 1000,
+        estimatedRate: 0.0,
         notes: "",
         productionDate: dayjs().format("YYYY-MM-DD"),
       });
@@ -196,6 +209,7 @@ function ProductionPageContent() {
         ...values,
         boxesProduced: Number(values.boxesProduced),
         piecesPerBox: Number(values.piecesPerBox),
+        estimatedRate: Number(values.estimatedRate || 0.0),
       };
 
       let res;
@@ -254,6 +268,8 @@ function ProductionPageContent() {
     { key: "boxesProduced", label: "Boxes Produced", className: "text-right" },
     { key: "piecesPerBox", label: "Pieces/Box", className: "text-right" },
     { key: "totalPieces", label: "Total Pieces", className: "text-right" },
+    { key: "estimatedRate", label: "Price/Box", className: "text-right" },
+    { key: "estimatedValue", label: "Est. Value", className: "text-right" },
     { key: "productionDate", label: "Production Date" },
     { key: "actions", label: "Actions", className: "w-28 text-right" },
   ];
@@ -268,11 +284,16 @@ function ProductionPageContent() {
           </div>
         );
       case "boxesProduced":
-        return <span className="font-bold text-emerald-600">{item.boxesProduced} Boxes</span>;
+        return <span className="font-bold text-emerald-605">{item.boxesProduced} Boxes</span>;
       case "piecesPerBox":
         return <span className="font-semibold text-slate-450">{item.piecesPerBox.toLocaleString()}</span>;
       case "totalPieces":
         return <span className="font-extrabold text-slate-900 dark:text-slate-50">{item.totalPieces.toLocaleString()} pcs</span>;
+      case "estimatedRate":
+        return <span className="font-semibold text-slate-700 dark:text-slate-300">₹{Number(item.estimatedRate || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>;
+      case "estimatedValue":
+        const totalValue = Number(item.boxesProduced) * Number(item.estimatedRate || 0);
+        return <span className="font-extrabold text-emerald-600 dark:text-emerald-450">₹{totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>;
       case "productionDate":
         return <span className="font-semibold text-slate-550 dark:text-slate-400">{dayjs(item.productionDate).format("DD MMM YYYY")}</span>;
       case "actions":
@@ -322,6 +343,8 @@ function ProductionPageContent() {
         <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 border-t border-slate-100 dark:border-slate-850 pt-2.5 mt-1 font-semibold">
           <div>Pieces/Box: {item.piecesPerBox.toLocaleString()}</div>
           <div className="text-right font-extrabold text-slate-800 dark:text-slate-200">Total: {item.totalPieces.toLocaleString()} pcs</div>
+          <div>Price/Box: ₹{Number(item.estimatedRate || 0).toFixed(2)}</div>
+          <div className="text-right font-black text-emerald-650">Est. Value: ₹{(Number(item.boxesProduced) * Number(item.estimatedRate || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
         </div>
 
         <div className="flex justify-between items-center mt-1 text-xs">
@@ -532,17 +555,40 @@ function ProductionPageContent() {
                   {errors.piecesPerBox && <span className="text-xs text-red-500">{String(errors.piecesPerBox.message)}</span>}
                 </div>
 
-                {/* Auto calculated total pieces display */}
-                <div className="flex flex-col gap-1 p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-150 dark:border-slate-850">
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
-                    Auto Calculated Yield
-                  </span>
-                  <span className="text-base font-extrabold text-slate-850 dark:text-slate-200">
-                    {computedTotalPieces.toLocaleString()} Pieces
-                  </span>
-                  <span className="text-[10px] text-slate-400">
-                    Total Pieces = Boxes Produced × Pieces Per Box
-                  </span>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-355">
+                    Approximated Value (per Box) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 850"
+                    {...register("estimatedRate", { required: "Price/Box is required", valueAsNumber: true })}
+                    className={`flex h-10 w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-955 ${
+                      errors.estimatedRate ? "border-red-500 focus:border-red-655" : "border-slate-200 focus:border-slate-900 dark:border-slate-800"
+                    }`}
+                  />
+                  {errors.estimatedRate && <span className="text-xs text-red-500">{String(errors.estimatedRate.message)}</span>}
+                </div>
+
+                {/* Auto calculated total pieces & value display */}
+                <div className="flex flex-col gap-2.5 p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-150 dark:border-slate-850">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                      Auto Calculated Yield
+                    </span>
+                    <span className="text-base font-extrabold text-slate-850 dark:text-slate-200">
+                      {computedTotalPieces.toLocaleString()} Pieces
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 border-t border-slate-200 dark:border-slate-800 pt-2">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                      Estimated Production Value
+                    </span>
+                    <span className="text-base font-black text-emerald-655 dark:text-emerald-450">
+                      ₹{computedTotalValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">

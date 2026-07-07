@@ -25,6 +25,7 @@ export interface CreateProductionInput {
   productId: string;
   boxesProduced: number;
   piecesPerBox: number;
+  estimatedRate?: number;
   notes?: string | null;
   productionDate: Date;
 }
@@ -34,6 +35,7 @@ export interface UpdateProductionInput {
   productId: string;
   boxesProduced: number;
   piecesPerBox: number;
+  estimatedRate?: number;
   notes?: string | null;
   productionDate: Date;
 }
@@ -213,9 +215,10 @@ export const ManufacturingService = {
           boxesProduced: new Prisma.Decimal(data.boxesProduced),
           piecesPerBox: data.piecesPerBox,
           totalPieces: new Prisma.Decimal(totalPieces),
+          estimatedRate: new Prisma.Decimal(data.estimatedRate || 0.0),
           productionDate: data.productionDate,
           notes: data.notes || null,
-        },
+        } as any,
       });
 
       // 5. Increase inventory stock using InventoryService
@@ -287,9 +290,10 @@ export const ManufacturingService = {
           boxesProduced: new Prisma.Decimal(data.boxesProduced),
           piecesPerBox: data.piecesPerBox,
           totalPieces: new Prisma.Decimal(totalPieces),
+          estimatedRate: new Prisma.Decimal(data.estimatedRate || 0.0),
           productionDate: data.productionDate,
           notes: data.notes || null,
-        },
+        } as any,
       });
 
       // 6. Apply new stock increase
@@ -403,6 +407,16 @@ export const ManufacturingService = {
         ...x,
         boxesProduced: Number(x.boxesProduced),
         totalPieces: Number(x.totalPieces),
+        estimatedRate: Number((x as any).estimatedRate || 0.0),
+        product: x.product ? {
+          ...x.product,
+          currentStock: Number(x.product.currentStock),
+          averageCost: Number(x.product.averageCost),
+          purchasePrice: x.product.purchasePrice ? Number(x.product.purchasePrice) : null,
+          sellingPrice: x.product.sellingPrice ? Number(x.product.sellingPrice) : null,
+          minStockAlert: x.product.minStockAlert ? Number(x.product.minStockAlert) : null,
+          gstRate: x.product.gstRate ? Number(x.product.gstRate) : null,
+        } : null,
       })),
       total,
       page,

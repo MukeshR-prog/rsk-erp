@@ -624,13 +624,13 @@ export const DashboardService = {
       }
     };
 
-    const dataMap: Record<string, { label: string; expenses: number; boxes: number; pieces: number }> = {};
+    const dataMap: Record<string, { label: string; expenses: number; boxes: number; pieces: number; estimatedValue: number }> = {};
 
     let runner = new Date(startDate);
     const endRange = new Date();
     while (runner <= endRange) {
       const key = getGroupKey(runner);
-      dataMap[key] = { label: key, expenses: 0, boxes: 0, pieces: 0 };
+      dataMap[key] = { label: key, expenses: 0, boxes: 0, pieces: 0, estimatedValue: 0 };
       if (filter === "daily") {
         runner.setDate(runner.getDate() + 1);
       } else if (filter === "weekly") {
@@ -644,7 +644,7 @@ export const DashboardService = {
 
     const finalKey = getGroupKey(endRange);
     if (!dataMap[finalKey]) {
-      dataMap[finalKey] = { label: finalKey, expenses: 0, boxes: 0, pieces: 0 };
+      dataMap[finalKey] = { label: finalKey, expenses: 0, boxes: 0, pieces: 0, estimatedValue: 0 };
     }
 
     expenses.forEach((e) => {
@@ -659,10 +659,17 @@ export const DashboardService = {
       if (dataMap[key]) {
         dataMap[key].boxes += Number(p.boxesProduced);
         dataMap[key].pieces += Number(p.totalPieces);
+        dataMap[key].estimatedValue += Number(p.boxesProduced) * Number((p as any).estimatedRate || 0.0);
       }
     });
 
-    const chartData = Object.values(dataMap);
+    const chartData = Object.values(dataMap).map((item) => {
+      const profit = item.estimatedValue - item.expenses;
+      return {
+        ...item,
+        profit,
+      };
+    });
 
     const catMap: Record<string, number> = {};
     expenses.forEach((e) => {
@@ -674,12 +681,16 @@ export const DashboardService = {
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
     const totalBoxesProduced = production.reduce((sum, p) => sum + Number(p.boxesProduced), 0);
     const totalPiecesProduced = production.reduce((sum, p) => sum + Number(p.totalPieces), 0);
+    const totalProductionValue = production.reduce((sum, p) => sum + Number(p.boxesProduced) * Number((p as any).estimatedRate || 0.0), 0);
+    const netProfit = totalProductionValue - totalExpenses;
 
     return {
       summary: {
         totalExpenses,
         totalBoxesProduced,
         totalPiecesProduced,
+        totalProductionValue,
+        netProfit,
       },
       expenseBreakdown,
       chartData,
