@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUIStore } from "@/stores/useUIStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
-import { LayoutDashboard, TrendingUp, Factory, Package, Menu, ShoppingCart, Layers } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Factory, Package, Menu, ShoppingCart, Layers, CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function BottomNav() {
@@ -22,6 +22,7 @@ export default function BottomNav() {
     { label: "Home", href: "/trading", icon: LayoutDashboard },
     { label: "Purchases", href: "/trading/purchases", icon: ShoppingCart },
     { label: "Sales", href: "/trading/sales", icon: TrendingUp },
+    { label: "Payments", href: "/trading/payments", icon: CreditCard },
   ];
 
   const manufacturingItems = [

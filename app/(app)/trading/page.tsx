@@ -13,6 +13,13 @@ import {
   ArrowRight,
   TrendingDown,
   Info,
+  Wallet,
+  Package,
+  AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
+  Coins,
+  Banknote,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
@@ -93,15 +100,48 @@ export default function TradingDashboardPage() {
   const { metrics, recentPurchases, recentPayments } = data;
 
   const kpis = [
-    { title: "Today's Purchases", value: `₹${metrics.todayPurchases.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Logged bills today" },
-    { title: "Today's Payments", value: `₹${metrics.todayPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Cleared vendor payments today" },
-    { title: "Supplier Outstanding", value: `₹${metrics.supplierOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Total unpaid supplier bills" },
-    { title: "Current Stock Value", value: `₹${metrics.currentStockValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Weighted stock valuation" },
-    { title: "Today's Sales", value: `₹${metrics.todaySales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Logged sales today" },
-    { title: "Today's Collections", value: `₹${metrics.todayCollections.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Cleared customer collections today" },
-    { title: "Customer Outstanding", value: `₹${metrics.customerOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Total unpaid customer invoices" },
-    { title: "Low Stock Items", value: `${metrics.lowStockCount} Items`, subtitle: "Current inventory warnings" },
+    { title: "Today's Sales", value: `₹${metrics.todaySales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Logged sales today", icon: TrendingUp, color: "emerald" },
+    { title: "Today's Purchases", value: `₹${metrics.todayPurchases.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Logged bills today", icon: ShoppingBag, color: "rose" },
+    { title: "Today's Collections", value: `₹${metrics.todayCollections.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Cleared customer collections", icon: Coins, color: "teal" },
+    { title: "Today's Payments", value: `₹${metrics.todayPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Cleared vendor payments", icon: Wallet, color: "pink" },
+    { title: "Customer Outstanding", value: `₹${metrics.customerOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Total unpaid customer invoices", icon: Users, color: "amber" },
+    { title: "Supplier Outstanding", value: `₹${metrics.supplierOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Total unpaid supplier bills", icon: Users, color: "purple" },
+    { title: "Current Stock Value", value: `₹${metrics.currentStockValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, subtitle: "Weighted stock valuation", icon: Package, color: "blue" },
+    { title: "Low Stock Items", value: `${metrics.lowStockCount} Items`, subtitle: "Current inventory warnings", icon: AlertTriangle, color: "orange" },
   ];
+
+  const colorGradients: Record<string, string> = {
+    emerald: "from-emerald-500 to-teal-500",
+    rose: "from-rose-500 to-pink-500",
+    teal: "from-teal-500 to-cyan-500",
+    pink: "from-pink-500 to-rose-500",
+    amber: "from-amber-500 to-orange-500",
+    purple: "from-purple-500 to-indigo-500",
+    blue: "from-blue-500 to-indigo-500",
+    orange: "from-orange-500 to-red-500",
+  };
+
+  const colorBadgeStyles: Record<string, string> = {
+    emerald: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-450",
+    rose: "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-450",
+    teal: "bg-teal-50 text-teal-600 dark:bg-teal-950/30 dark:text-teal-450",
+    pink: "bg-pink-50 text-pink-600 dark:bg-pink-950/30 dark:text-pink-450",
+    amber: "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-450",
+    purple: "bg-purple-50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-450",
+    blue: "bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-450",
+    orange: "bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-450",
+  };
+
+  const colorTextStyles: Record<string, string> = {
+    emerald: "text-emerald-650 dark:text-emerald-450",
+    rose: "text-rose-650 dark:text-rose-450",
+    teal: "text-teal-650 dark:text-teal-450",
+    pink: "text-pink-650 dark:text-pink-450",
+    amber: "text-amber-655 dark:text-amber-450",
+    purple: "text-purple-650 dark:text-purple-450",
+    blue: "text-blue-650 dark:text-blue-450",
+    orange: "text-orange-655 dark:text-orange-450",
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -112,7 +152,7 @@ export default function TradingDashboardPage() {
           <Link href="/trading/purchases?new=true">
             <Button
               variant="primary"
-              className="w-full sm:w-auto font-bold rounded-xl"
+              className="w-full sm:w-auto font-bold rounded-xl bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-950 border-none"
               size="md"
             >
               <Plus className="w-4.5 h-4.5 mr-1.5" />
@@ -123,63 +163,78 @@ export default function TradingDashboardPage() {
       />
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <Card
-            key={kpi.title}
-            className="border-l-4 border-l-slate-900 dark:border-l-slate-100"
-            title={kpi.title}
-            subtitle={kpi.subtitle}
-          >
-            <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100 block mt-1">
-              {kpi.value}
-            </span>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {kpis.map((kpi) => {
+          const Icon = kpi.icon;
+          return (
+            <div
+              key={kpi.title}
+              className="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-150 dark:border-slate-855 p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between relative overflow-hidden group hover:-translate-y-0.5"
+            >
+              <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${colorGradients[kpi.color]}`} />
+              
+              <div className="flex justify-between items-start mt-1">
+                <div className="flex flex-col gap-0.5 text-left">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    {kpi.title}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-450 dark:text-slate-500 line-clamp-1">
+                    {kpi.subtitle}
+                  </span>
+                </div>
+                <div className={`p-2 rounded-xl ${colorBadgeStyles[kpi.color]} shrink-0 transition-transform duration-200 group-hover:scale-110`}>
+                  <Icon className="w-4.5 h-4.5" />
+                </div>
+              </div>
+              
+              <div className="mt-4 flex flex-col text-left">
+                <span className={`text-xl sm:text-2xl font-black tracking-tight ${colorTextStyles[kpi.color]}`}>
+                  {kpi.value}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Quick Action Shortcuts Panel */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card title="Quick Tasks" className="md:col-span-2" subtitle="One-tap actions for common trading transactions">
-          <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Link href="/trading/purchases?new=true" className="w-full">
-              <Button
-                variant="tertiary"
-                className="h-20 w-full flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855"
-              >
-                <ShoppingBag className="w-5 h-5 text-slate-805 dark:text-slate-205" />
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">New Purchase</span>
-              </Button>
+              <div className="h-24 w-full flex flex-col items-center justify-center gap-2 rounded-2xl p-3 border border-slate-150 dark:border-slate-855 bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/60 hover:border-slate-350 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer group">
+                <div className="p-2 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 rounded-xl shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <ShoppingBag className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-black text-slate-755 dark:text-slate-200 tracking-wide">New Purchase</span>
+              </div>
             </Link>
 
             <Link href="/trading/sales?new=true" className="w-full">
-              <Button
-                variant="tertiary"
-                className="h-20 w-full flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855"
-              >
-                <TrendingUp className="w-5 h-5 text-slate-805 dark:text-slate-205" />
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">New Sale</span>
-              </Button>
+              <div className="h-24 w-full flex flex-col items-center justify-center gap-2 rounded-2xl p-3 border border-slate-150 dark:border-slate-855 bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/60 hover:border-slate-355 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer group">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-black text-slate-755 dark:text-slate-200 tracking-wide">New Sale</span>
+              </div>
             </Link>
 
             <Link href="/trading/payments?new=true&mode=CUSTOMER" className="w-full">
-              <Button
-                variant="tertiary"
-                className="h-20 w-full flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855"
-              >
-                <CreditCard className="w-5 h-5 text-slate-805 dark:text-slate-205" />
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Receive Payment</span>
-              </Button>
+              <div className="h-24 w-full flex flex-col items-center justify-center gap-2 rounded-2xl p-3 border border-slate-150 dark:border-slate-855 bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/60 hover:border-slate-355 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer group">
+                <div className="p-2 bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-450 rounded-xl shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <Coins className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-black text-slate-755 dark:text-slate-200 tracking-wide">Customer Payment</span>
+              </div>
             </Link>
 
             <Link href="/trading/payments?new=true&mode=SUPPLIER" className="w-full">
-              <Button
-                variant="tertiary"
-                className="h-20 w-full flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 border border-slate-150 dark:border-slate-855"
-              >
-                <TrendingDown className="w-5 h-5 text-slate-805 dark:text-slate-205" />
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Supplier Payment</span>
-              </Button>
+              <div className="h-24 w-full flex flex-col items-center justify-center gap-2 rounded-2xl p-3 border border-slate-150 dark:border-slate-855 bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/60 hover:border-slate-355 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer group">
+                <div className="p-2 bg-pink-50 dark:bg-pink-950/20 text-pink-650 dark:text-pink-400 rounded-xl shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-black text-slate-755 dark:text-slate-200 tracking-wide">Supplier Payment</span>
+              </div>
             </Link>
           </div>
         </Card>
@@ -188,7 +243,7 @@ export default function TradingDashboardPage() {
         <Card title="Workspace Metrics" subtitle="Active registers configuration">
           <div className="flex flex-col gap-3 mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
             <div className="flex gap-2.5 items-start">
-              <Info className="w-5 h-5 text-slate-900 dark:text-slate-50 shrink-0" />
+              <Info className="w-5 h-5 text-slate-900 dark:text-slate-55 shrink-0" />
               <span>
                 These analytics are linked directly to your Supabase PostgreSQL registers. Double entries calculate outstandings on runtime.
               </span>

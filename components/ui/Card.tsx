@@ -23,7 +23,7 @@ export default function Card({
   return (
     <HeroUICard className={`shadow-sm border border-slate-100 dark:border-slate-900 ${className}`}>
       {hasHeader && (
-        <CardHeader className="flex items-center justify-between px-6 pt-5 pb-3">
+        <CardHeader className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3">
           <div className="flex flex-col min-w-0">
             {title && (
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">
@@ -39,9 +39,9 @@ export default function Card({
           {headerAction && <div className="flex-shrink-0 ml-4">{headerAction}</div>}
         </CardHeader>
       )}
-      <CardContent className="px-6 py-4">{children}</CardContent>
+      <CardContent className="px-4 sm:px-6 py-3 sm:py-4">{children}</CardContent>
       {footerAction && (
-        <CardFooter className="px-6 py-4 border-t border-slate-50 bg-slate-50/50 dark:border-slate-900 dark:bg-slate-900/10">
+        <CardFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-50 bg-slate-50/50 dark:border-slate-900 dark:bg-slate-900/10">
           <div className="flex w-full items-center justify-end gap-3">{footerAction}</div>
         </CardFooter>
       )}
