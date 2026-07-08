@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@heroui/react";
 import toast from "react-hot-toast";
+import dayjs from "dayjs";
 
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
@@ -22,6 +23,7 @@ import Table from "@/components/ui/Table";
 import EmptyState from "@/components/ui/EmptyState";
 import { SaleForm } from "@/components/erp/sales/SaleForm";
 import { SaleStatusBadge } from "@/components/erp/sales/SaleStatusBadge";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 import {
   getSalesAction,
@@ -196,39 +198,48 @@ export default function SalesPage() {
   const renderMobileCard = (item: any) => {
     const isExpanded = expandedRows[item.id];
     return (
-      <div key={item.id} className="flex flex-col gap-3 bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 shadow-xs">
+      <div key={item.id} className="flex flex-col gap-2.5 bg-white dark:bg-slate-955 p-3 sm:p-4 rounded-xl border border-slate-100 dark:border-slate-850 shadow-xs">
         <div
           onClick={() => toggleRow(item.id)}
           className="flex justify-between items-start cursor-pointer"
         >
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate max-w-[140px] sm:max-w-none block">
               {item.customer?.name}
             </span>
-            <span className="font-bold text-slate-900 dark:text-slate-50">{item.saleNumber}</span>
+            <span className="font-bold text-sm text-slate-900 dark:text-slate-50">{item.saleNumber}</span>
           </div>
           <div className="text-right">
-            <span className="font-extrabold text-slate-900 dark:text-slate-50 block">
+            <span className="font-extrabold text-sm text-slate-900 dark:text-slate-50 block">
               ₹{Number(item.grandTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </span>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">
-              {new Date(item.saleDate).toLocaleDateString()}
+            <span className="text-[9px] text-slate-405 dark:text-slate-500 font-semibold">
+              {dayjs(item.saleDate).format("DD/MM/YYYY")}
             </span>
           </div>
         </div>
 
-        <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800 mt-0.5">
+          <div className="flex gap-1.5 shrink-0">
             <SaleStatusBadge status={item.status} />
             <SaleStatusBadge paymentStatus={item.paymentStatus} />
           </div>
-          <button
-            type="button"
-            onClick={() => toggleRow(item.id)}
-            className="text-xs font-bold text-blue-600 hover:underline"
-          >
-            {isExpanded ? "Hide items" : "Show items"}
-          </button>
+          <div className="flex gap-2 items-center shrink-0">
+            <button
+              type="button"
+              onClick={() => toggleRow(item.id)}
+              className="text-[10px] font-bold text-blue-650 hover:underline px-2 py-1 bg-blue-50/50 dark:bg-blue-955/20 rounded-lg shrink-0"
+            >
+              {isExpanded ? "Hide items" : "Show items"}
+            </button>
+            <Link
+              href={`/trading/sales/${item.id}`}
+              className="text-[10px] font-bold text-slate-900 dark:text-white flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0"
+            >
+              <span>Report</span>
+              <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
         </div>
 
         {isExpanded && item.items && item.items.length > 0 && (
@@ -253,7 +264,7 @@ export default function SalesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5 sm:gap-6">
       <Header
         title="Sales Invoices"
         subtitle="Track customer bills, receipts, outstanding, and dispatch stock level logs"
@@ -274,32 +285,44 @@ export default function SalesPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="border-l-4 border-l-emerald-500" title="Today's Sales" subtitle="Completed customer dispatch value">
           <div className="flex items-baseline gap-1 mt-1.5">
-            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
-              ₹{metrics.todaySales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-            </span>
+            {loading ? (
+              <div className="h-7 w-32 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
+            ) : (
+              <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
+                ₹{metrics.todaySales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </span>
+            )}
           </div>
         </Card>
 
         <Card className="border-l-4 border-l-blue-500" title="Monthly Sales" subtitle="Aggregated sales for current month">
           <div className="flex items-baseline gap-1 mt-1.5">
-            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
-              ₹{metrics.monthlySales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-            </span>
+            {loading ? (
+              <div className="h-7 w-32 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
+            ) : (
+              <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
+                ₹{metrics.monthlySales.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </span>
+            )}
           </div>
         </Card>
 
         <Card className="border-l-4 border-l-rose-500" title="Total Outstanding Receivables" subtitle="Dynamic customers outstanding summary">
           <div className="flex items-baseline gap-1 mt-1.5">
-            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
-              ₹{metrics.customerOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-            </span>
+            {loading ? (
+              <div className="h-7 w-32 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
+            ) : (
+              <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
+                ₹{metrics.customerOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </span>
+            )}
           </div>
         </Card>
       </div>
 
       {/* Filters and Table List */}
       <Card>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2.5 sm:gap-4">
           <div className="flex flex-col sm:flex-row justify-between gap-3 items-center">
             {/* Search Input */}
             <div className="relative w-full sm:max-w-md">
@@ -349,12 +372,7 @@ export default function SalesPage() {
           </div>
 
           {loading ? (
-            <div className="flex flex-col gap-2 py-8 items-center justify-center">
-              <div className="w-8 h-8 rounded-full border-2 border-slate-350 border-t-slate-900 dark:border-slate-800 dark:border-t-slate-50 animate-spin" />
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                Loading Sales Invoices...
-              </span>
-            </div>
+            <TableSkeleton rows={5} />
           ) : (
             <div className="w-full">
               {/* Mobile View */}

@@ -7,6 +7,7 @@ import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import {
   Button,
   Modal,
@@ -226,7 +227,7 @@ function CustomersPageContent() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5 sm:gap-6">
       <Header
         title="Customers directory"
         subtitle="Manage trading customers, outstanding invoices, payments received and statements"
@@ -264,7 +265,7 @@ function CustomersPageContent() {
 
       <Card>
         {isPending ? (
-          <div className="py-20 text-center font-medium text-slate-500">Loading customers directory...</div>
+          <TableSkeleton rows={5} />
         ) : (
           <Table<ContactData>
             headers={tableHeaders}

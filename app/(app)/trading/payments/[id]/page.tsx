@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 import PaymentStatusBadge from "@/components/erp/payments/PaymentStatusBadge";
 import { getSupplierPayment, cancelSupplierPaymentAction } from "@/features/trading/payments/actions";
 import dayjs from "dayjs";
@@ -108,8 +109,9 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
 
   if (loading) {
     return (
-      <div className="flex h-100 items-center justify-center text-slate-500 font-medium">
-        Loading transaction details...
+      <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto animate-pulse">
+        <Header title="Transaction Details" subtitle="Loading record details..." />
+        <CardSkeleton />
       </div>
     );
   }

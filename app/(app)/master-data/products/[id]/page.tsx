@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 import {
   Button,
   Modal,
@@ -185,8 +186,9 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
 
   if (loading) {
     return (
-      <div className="py-20 text-center font-medium text-slate-500">
-        Loading product details...
+      <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto animate-pulse">
+        <Header title="Product Details" subtitle="Loading catalog specifications..." />
+        <CardSkeleton />
       </div>
     );
   }

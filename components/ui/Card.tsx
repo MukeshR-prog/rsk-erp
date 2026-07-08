@@ -1,5 +1,5 @@
 import React from "react";
-import { Card as HeroUICard, CardHeader, CardContent, CardFooter } from "@heroui/react";
+import { Card as HeroUICard } from "@heroui/react";
 
 interface CardProps {
   children: React.ReactNode;
@@ -23,27 +23,27 @@ export default function Card({
   return (
     <HeroUICard className={`shadow-sm border border-slate-100 dark:border-slate-900 ${className}`}>
       {hasHeader && (
-        <CardHeader className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3">
-          <div className="flex flex-col min-w-0">
+        <div className="flex items-center justify-between px-3 sm:px-6 pt-3 sm:pt-5 pb-1.5 sm:pb-3 border-b border-slate-100/50 dark:border-slate-900/50">
+          <div className="flex flex-col min-w-0 w-full">
             {title && (
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-50 truncate" title={title}>
                 {title}
               </h3>
             )}
             {subtitle && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate" title={subtitle}>
                 {subtitle}
               </p>
             )}
           </div>
           {headerAction && <div className="flex-shrink-0 ml-4">{headerAction}</div>}
-        </CardHeader>
+        </div>
       )}
-      <CardContent className="px-4 sm:px-6 py-3 sm:py-4">{children}</CardContent>
+      <div className="px-3 sm:px-6 py-2 sm:py-4 flex-1 min-w-0">{children}</div>
       {footerAction && (
-        <CardFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-50 bg-slate-50/50 dark:border-slate-900 dark:bg-slate-900/10">
+        <div className="px-3 sm:px-6 py-2 sm:py-4 border-t border-slate-50 bg-slate-50/50 dark:border-slate-900 dark:bg-slate-900/10">
           <div className="flex w-full items-center justify-end gap-3">{footerAction}</div>
-        </CardFooter>
+        </div>
       )}
     </HeroUICard>
   );

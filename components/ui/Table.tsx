@@ -37,13 +37,13 @@ export default function Table<T>({
   // Fallback default mobile card if no renderMobileCard is specified
   const defaultMobileCard = (item: T) => {
     return (
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2">
         {headers.map((col) => (
-          <div key={col.key} className="flex justify-between items-center text-sm border-b border-slate-50 dark:border-slate-900/50 pb-1.5 last:border-b-0 last:pb-0">
-            <span className="font-semibold text-slate-500 dark:text-slate-400 text-xs">
+          <div key={col.key} className="flex justify-between items-start gap-3 text-sm border-b border-slate-50 dark:border-slate-900/50 pb-1.5 last:border-b-0 last:pb-0">
+            <span className="font-bold text-slate-400 dark:text-slate-500 text-[10px] uppercase tracking-wider shrink-0 mt-0.5">
               {col.label}
             </span>
-            <span className="text-slate-800 dark:text-slate-200">
+            <span className="text-slate-800 dark:text-slate-200 text-right text-xs font-semibold break-words min-w-0 flex-1">
               {renderCell(item, col.key)}
             </span>
           </div>
@@ -55,14 +55,14 @@ export default function Table<T>({
   return (
     <div className="w-full">
       {/* Mobile Card Stack Layout (hidden on tablet/desktop) */}
-      <div className="flex flex-col gap-4.5 md:hidden">
+      <div className="flex flex-col gap-2.5 md:hidden">
         {data.map((item) => {
           const key = String(item[keyField]);
           return (
             <div
               key={key}
               onClick={() => onRowClick?.(item)}
-              className={`p-5 rounded-2xl bg-white border border-slate-100 dark:bg-slate-950 dark:border-slate-900 shadow-sm transition-all duration-200 ${
+              className={`p-3.5 rounded-xl bg-white border border-slate-100 dark:bg-slate-955 dark:border-slate-900 shadow-sm transition-all duration-200 ${
                 isClickable ? "active:scale-[0.98] cursor-pointer hover:bg-slate-50/55 dark:hover:bg-slate-900/40" : ""
               }`}
             >

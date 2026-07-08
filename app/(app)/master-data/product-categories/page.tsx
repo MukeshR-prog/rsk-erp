@@ -7,6 +7,7 @@ import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import {
   Button,
   Modal,
@@ -249,7 +250,7 @@ export default function ProductCategoriesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5 sm:gap-6">
       <Header
         title="Product Categories"
         subtitle="Manage product catalog tags for ERP reporting"
@@ -302,7 +303,7 @@ export default function ProductCategoriesPage() {
 
       <Card>
         {isPending ? (
-          <div className="py-20 text-center font-medium text-slate-500">Loading categories...</div>
+          <TableSkeleton rows={5} />
         ) : (
           <Table<CategoryData>
             headers={tableHeaders}
@@ -380,7 +381,7 @@ export default function ProductCategoriesPage() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2.5 sm:gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-sm font-bold text-slate-700 dark:text-slate-350">
                         Category Name *

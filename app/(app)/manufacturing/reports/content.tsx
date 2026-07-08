@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import { Tabs, Tab } from "@heroui/react";
+import { StatsSkeleton } from "@/components/ui/Skeleton";
 import { getManufacturingReportsAction } from "@/features/shared/dashboard/actions";
 import {
   TrendingDown,
@@ -110,10 +111,7 @@ export default function ReportsPageContent() {
       </div>
 
       {isPending || !reportData ? (
-        <div className="py-24 text-center">
-          <div className="w-8 h-8 rounded-full border-2 border-slate-350 border-t-slate-900 animate-spin mx-auto mb-4" />
-          <span className="text-sm text-slate-550 font-semibold uppercase tracking-wider">Generating report details...</span>
-        </div>
+        <StatsSkeleton />
       ) : (
         <div className="flex flex-col gap-6">
           {/* KPI summaries */}

@@ -8,6 +8,7 @@ import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import {
   Button,
   Modal,
@@ -404,7 +405,7 @@ function ProductsPageContent() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5 sm:gap-6">
       <Header
         title="Products Catalog"
         subtitle="Manage raw materials, finished outputs, and trading items"
@@ -473,7 +474,7 @@ function ProductsPageContent() {
 
       <Card>
         {isPending ? (
-          <div className="py-20 text-center font-medium text-slate-500">Loading products...</div>
+          <TableSkeleton rows={5} />
         ) : (
           <Table<ProductData>
             headers={tableHeaders}

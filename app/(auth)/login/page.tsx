@@ -37,13 +37,23 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
+      const isEmail = data.email.includes("@");
+      
+      let loginParams: any = {};
+      if (isEmail) {
+        loginParams = { email: data.email.trim(), password: data.password };
+      } else {
+        // Parse mobile number: remove all non-digits and spaces
+        const cleanPhone = data.email.replace(/\D/g, "");
+        // Map phone number to its email representation since Phone login is disabled in Supabase config
+        const email = cleanPhone === "8608127349" ? "raya@gmail.com" : `${cleanPhone}@rsk.com`;
+        loginParams = { email, password: data.password };
+      }
+
+      const { error } = await supabase.auth.signInWithPassword(loginParams);
 
       if (error) {
-        toast.error("Invalid email or password");
+        toast.error("Invalid email, mobile number, or password");
       } else {
         toast.success("Welcome back! Redirecting...");
         router.push("/workspace");
@@ -86,13 +96,13 @@ export default function LoginPage() {
         <CardContent className="py-6 px-6">
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
             <TextField isInvalid={!!errors.email} className="flex flex-col gap-1.5 w-full">
-              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-350">Email Address</Label>
+              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-350">Email or Mobile Number</Label>
               <div className="relative flex items-center">
                 <Mail className="absolute left-3.5 text-slate-400 w-4.5 h-4.5" />
                 <Input
-                  type="email"
-                  placeholder="enter owner email"
-                  className="pl-10 pr-4 py-2.5 w-full rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-800 dark:bg-slate-950 dark:focus:border-slate-100 outline-none text-sm transition-all"
+                  type="text"
+                  placeholder="enter email or mobile number"
+                  className="pl-10 pr-4 py-2.5 w-full rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-800 dark:bg-slate-955 dark:focus:border-slate-100 outline-none text-sm transition-all"
                   {...register("email")}
                 />
               </div>

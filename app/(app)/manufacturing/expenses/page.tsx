@@ -8,6 +8,7 @@ import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import {
   Button,
   Modal,
@@ -365,7 +366,7 @@ function ExpensesPageContent() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5 sm:gap-6">
       <Header
         title="Manufacturing Expenses"
         subtitle="Manage electricity, direct transport, rolls repair and factory floor costs"
@@ -475,7 +476,7 @@ function ExpensesPageContent() {
 
       <Card>
         {isPending ? (
-          <div className="py-20 text-center font-medium text-slate-500">Loading expenses log...</div>
+          <TableSkeleton rows={5} />
         ) : (
           <Table<ExpenseData>
             headers={tableHeaders}
@@ -554,7 +555,7 @@ function ExpensesPageContent() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2.5 sm:gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-350">
                     Category *

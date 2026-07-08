@@ -5,6 +5,7 @@ import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
 import { Search, AlertTriangle, CheckCircle, Package } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import toast from "react-hot-toast";
 import { getCentralizedStockAction } from "@/features/inventory/actions";
 import { Button } from "@heroui/react";
@@ -171,7 +172,7 @@ function StockPageContent() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5 sm:gap-6">
       <Header
         title="Finished Goods Stock"
         subtitle="Centralized inventory tracking for manufactured cups and paper rolls"
@@ -198,7 +199,7 @@ function StockPageContent() {
 
       <Card>
         {isPending ? (
-          <div className="py-20 text-center font-medium text-slate-500">Loading stock inventory...</div>
+          <TableSkeleton rows={5} />
         ) : (
           <Table<ProductStockData>
             headers={tableHeaders}

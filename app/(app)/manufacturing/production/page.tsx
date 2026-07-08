@@ -8,6 +8,7 @@ import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import {
   Button,
   Modal,
@@ -375,7 +376,7 @@ function ProductionPageContent() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5 sm:gap-6">
       <Header
         title="Production Entries"
         subtitle="Log factory manufactured finished articles directly to stock"
@@ -433,7 +434,7 @@ function ProductionPageContent() {
 
       <Card>
         {isPending ? (
-          <div className="py-20 text-center font-medium text-slate-500">Loading production history...</div>
+          <TableSkeleton rows={5} />
         ) : (
           <Table<ProductionData>
             headers={tableHeaders}
@@ -512,7 +513,7 @@ function ProductionPageContent() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2.5 sm:gap-4">
                 <div className="flex flex-col gap-1.5">
                   <Controller
                     name="productId"
