@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 import {
   FileText,
   DollarSign,
@@ -57,8 +58,9 @@ export default function SupplierDetailsPage({ params }: { params: Promise<{ id: 
 
   if (loading) {
     return (
-      <div className="py-20 text-center font-medium text-slate-500">
-        Loading supplier profile...
+      <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto animate-pulse">
+        <Header title="Supplier Profile" subtitle="Loading profile details..." />
+        <CardSkeleton />
       </div>
     );
   }

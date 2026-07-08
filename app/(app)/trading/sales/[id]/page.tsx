@@ -22,6 +22,7 @@ import { Button } from "@heroui/react";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 
 
 import {
@@ -328,11 +329,9 @@ export default function SaleDetailsPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-2 py-16 items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-slate-900 dark:border-slate-800 dark:border-t-slate-50 animate-spin" />
-        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-          Loading Sale Details...
-        </span>
+      <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto animate-pulse">
+        <Header title="Sale Details" subtitle="Loading sale details..." />
+        <CardSkeleton />
       </div>
     );
   }

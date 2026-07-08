@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import {
   Button,
 } from "@heroui/react";
@@ -218,7 +219,7 @@ function PaymentsPageContent() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5 sm:gap-6">
       {/* Header */}
       <Header
         title="Payments & Receipts Ledger"
@@ -263,9 +264,13 @@ function PaymentsPageContent() {
           subtitle="Cleared today"
           className="border-l-4 border-l-slate-900 dark:border-l-slate-100"
         >
-          <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white block mt-1">
-            ₹{metrics.todayPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-          </span>
+          {loading ? (
+            <div className="h-7 w-32 bg-slate-205 dark:bg-slate-800 rounded-lg animate-pulse mt-1" />
+          ) : (
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white block mt-1">
+              ₹{metrics.todayPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            </span>
+          )}
         </Card>
 
         <Card
@@ -273,9 +278,13 @@ function PaymentsPageContent() {
           subtitle="Cumulative total"
           className="border-l-4 border-l-green-600"
         >
-          <span className="text-xl sm:text-2xl font-bold tracking-tight text-green-600 dark:text-green-400 block mt-1">
-            ₹{metrics.totalPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-          </span>
+          {loading ? (
+            <div className="h-7 w-32 bg-slate-205 dark:bg-slate-800 rounded-lg animate-pulse mt-1" />
+          ) : (
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-green-600 dark:text-green-400 block mt-1">
+              ₹{metrics.totalPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            </span>
+          )}
         </Card>
 
         <Card
@@ -283,9 +292,13 @@ function PaymentsPageContent() {
           subtitle="Unpaid count"
           className="border-l-4 border-l-amber-500"
         >
-          <span className="text-xl sm:text-2xl font-bold tracking-tight text-amber-500 block mt-1">
-            {metrics.pendingBillsCount} Invoices
-          </span>
+          {loading ? (
+            <div className="h-7 w-24 bg-slate-205 dark:bg-slate-800 rounded-lg animate-pulse mt-1" />
+          ) : (
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-amber-500 block mt-1">
+              {metrics.pendingBillsCount} Invoices
+            </span>
+          )}
         </Card>
 
         <Card
@@ -293,15 +306,19 @@ function PaymentsPageContent() {
           subtitle="Active profiles"
           className="border-l-4 border-l-rose-500"
         >
-          <span className="text-xl sm:text-2xl font-bold tracking-tight text-rose-500 block mt-1">
-            {metrics.suppliersWithOutstanding} Accounts
-          </span>
+          {loading ? (
+            <div className="h-7 w-24 bg-slate-205 dark:bg-slate-800 rounded-lg animate-pulse mt-1" />
+          ) : (
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-rose-500 block mt-1">
+              {metrics.suppliersWithOutstanding} Accounts
+            </span>
+          )}
         </Card>
       </div>
 
       {/* Filters and List */}
       <Card title="Transaction Records Logs" subtitle="Query and filter ERP transaction vouchers">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2.5 sm:gap-4">
           {/* Main filters grid */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
             {/* Search */}
@@ -451,11 +468,9 @@ function PaymentsPageContent() {
 
           {/* Table list */}
           {loading ? (
-            <div className="text-center py-12 text-slate-500 font-medium">
-              Loading ledger data...
-            </div>
+            <TableSkeleton rows={5} />
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2.5 sm:gap-4">
               <PaymentHistoryTable
                 payments={payments}
                 onCancelClick={(p) => setCancellingPayment(p)}

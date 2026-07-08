@@ -39,6 +39,7 @@ import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import Table from "@/components/ui/Table";
 import EmptyState from "@/components/ui/EmptyState";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import ContactSelector from "@/components/ui/ContactSelector";
 import ProductSelector from "@/components/ui/ProductSelector";
 import CategorySelector from "@/components/ui/CategorySelector";
@@ -360,7 +361,7 @@ export default function PurchasesPage() {
           className="flex justify-between items-start cursor-pointer"
         >
           <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate max-w-[140px] sm:max-w-none block">
               {item.supplierName}
             </span>
             <span className="font-bold text-sm text-slate-900 dark:text-slate-50">{item.purchaseNumber}</span>
@@ -387,7 +388,7 @@ export default function PurchasesPage() {
           </div>
         )}
 
-        <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-2 mt-0.5">
+        <div className="flex flex-wrap gap-2 justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-2 mt-0.5">
           <div className="flex gap-1.5 shrink-0">
             <span
               className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
@@ -434,7 +435,7 @@ export default function PurchasesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5 sm:gap-6">
       <Header
         title="Purchase Invoices"
         subtitle="Manage supplier invoices, purchase orders, and items logs"
@@ -460,9 +461,13 @@ export default function PurchasesPage() {
             <div className="p-1 sm:p-2 bg-slate-905 text-white dark:bg-slate-50 dark:text-slate-905 rounded-lg shrink-0">
               <ShoppingBag className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
             </div>
-            <span className="text-xs sm:text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 truncate">
-              ₹{metrics.totalPurchases.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
-            </span>
+            {loading ? (
+              <div className="h-5 sm:h-6 w-14 sm:w-24 bg-slate-205 dark:bg-slate-800 rounded-lg animate-pulse" />
+            ) : (
+              <span className="text-xs sm:text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 truncate">
+                ₹{metrics.totalPurchases.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
+              </span>
+            )}
           </div>
         </div>
         
@@ -473,9 +478,13 @@ export default function PurchasesPage() {
             <div className="p-1 sm:p-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-450 rounded-lg shrink-0">
               <Calendar className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
             </div>
-            <span className="text-xs sm:text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 truncate">
-              ₹{metrics.todayPurchases.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
-            </span>
+            {loading ? (
+              <div className="h-5 sm:h-6 w-14 sm:w-24 bg-slate-205 dark:bg-slate-800 rounded-lg animate-pulse" />
+            ) : (
+              <span className="text-xs sm:text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 truncate">
+                ₹{metrics.todayPurchases.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
+              </span>
+            )}
           </div>
         </div>
 
@@ -486,16 +495,20 @@ export default function PurchasesPage() {
             <div className="p-1 sm:p-2 bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 rounded-lg shrink-0">
               <TrendingDown className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
             </div>
-            <span className="text-xs sm:text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 truncate">
-              ₹{metrics.pendingPayments.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
-            </span>
+            {loading ? (
+              <div className="h-5 sm:h-6 w-14 sm:w-24 bg-slate-205 dark:bg-slate-800 rounded-lg animate-pulse" />
+            ) : (
+              <span className="text-xs sm:text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 truncate">
+                ₹{metrics.pendingPayments.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       {/* Filters & Listing panel */}
       <Card>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2.5 sm:gap-4">
           <div className="flex flex-col sm:flex-row justify-between gap-3 items-center">
             {/* Search Input */}
             <div className="relative w-full sm:max-w-md">
@@ -596,14 +609,8 @@ export default function PurchasesPage() {
             ) : null}
           </div>
 
-          {/* Table Listing */}
           {loading ? (
-            <div className="flex flex-col gap-2 py-8 items-center justify-center">
-              <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-slate-900 dark:border-slate-800 dark:border-t-slate-50 animate-spin" />
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                Loading Purchases...
-              </span>
-            </div>
+            <TableSkeleton rows={5} />
           ) : (
             <div className="w-full">
               {/* Mobile View */}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import { Button } from "@heroui/react";
+import { StatsSkeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { getManufacturingDashboardAction } from "@/features/shared/dashboard/actions";
 import {
   Plus,
@@ -103,12 +104,20 @@ export default function ManufacturingDashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex h-[80vh] items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-slate-350 border-t-slate-900 dark:border-slate-800 dark:border-t-slate-100 animate-spin" />
-          <span className="text-xs text-slate-500 font-semibold tracking-wider uppercase">
-            Loading metrics...
-          </span>
+      <div className="flex flex-col gap-6 w-full animate-pulse">
+        <Header
+          title="Manufacturing Dashboard"
+          subtitle="Loading floor dashboard details..."
+        />
+        <StatsSkeleton />
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 flex flex-col gap-6">
+            <TableSkeleton rows={3} />
+            <TableSkeleton rows={3} />
+          </div>
+          <div>
+            <TableSkeleton rows={2} />
+          </div>
         </div>
       </div>
     );

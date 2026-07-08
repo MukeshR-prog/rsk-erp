@@ -24,6 +24,7 @@ import { Button } from "@heroui/react";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 
 import { getPurchaseDetails, cancelPurchase } from "@/features/trading/purchases/actions";
 import { cancelSupplierPaymentAction } from "@/features/trading/payments/actions";
@@ -112,11 +113,9 @@ export default function PurchaseDetailsPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4 py-16 items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-slate-900 dark:border-slate-800 dark:border-t-slate-50 animate-spin" />
-        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-          Loading Invoice Details...
-        </span>
+      <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto animate-pulse">
+        <Header title="Invoice Details" subtitle="Loading invoice details..." />
+        <CardSkeleton />
       </div>
     );
   }

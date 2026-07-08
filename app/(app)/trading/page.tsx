@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
+import { StatsSkeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
 import { getTradingDashboardAction } from "@/features/shared/dashboard/actions";
 import dayjs from "dayjs";
@@ -91,8 +92,16 @@ export default function TradingDashboardPage() {
 
   if (!data) {
     return (
-      <div className="flex h-100 items-center justify-center text-slate-500 font-medium">
-        Loading Trading Dashboard...
+      <div className="flex flex-col gap-6 w-full animate-pulse">
+        <Header
+          title="Trading Dashboard"
+          subtitle="Loading dashboard metrics and logs..."
+        />
+        <StatsSkeleton />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TableSkeleton rows={4} />
+          <TableSkeleton rows={4} />
+        </div>
       </div>
     );
   }
