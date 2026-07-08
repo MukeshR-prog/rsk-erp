@@ -349,46 +349,48 @@ export default function PurchasesPage() {
       default:
         return <span>{String(item[columnKey])}</span>;
     }
-  };  const renderMobileCard = (item: any) => {
+  };
+
+  const renderMobileCard = (item: any) => {
     const isExpanded = expandedRows[item.id];
     return (
-      <div key={item.id} className="flex flex-col gap-3 bg-white dark:bg-slate-955 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 shadow-xs animate-fadeIn">
+      <div key={item.id} className="flex flex-col gap-2.5 bg-white dark:bg-slate-955 p-3 sm:p-4 rounded-xl border border-slate-100 dark:border-slate-850 shadow-xs animate-fadeIn">
         <div
           onClick={() => toggleRow(item.id)}
           className="flex justify-between items-start cursor-pointer"
         >
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               {item.supplierName}
             </span>
-            <span className="font-bold text-slate-900 dark:text-slate-50">{item.purchaseNumber}</span>
+            <span className="font-bold text-sm text-slate-900 dark:text-slate-50">{item.purchaseNumber}</span>
           </div>
           <div className="text-right">
-            <span className="font-extrabold text-slate-900 dark:text-slate-50 block">
+            <span className="font-extrabold text-sm text-slate-900 dark:text-slate-50 block">
               ₹{item.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </span>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">
-              {new Date(item.purchaseDate).toLocaleDateString()}
+            <span className="text-[9px] text-slate-405 dark:text-slate-500 font-semibold">
+              {dayjs(item.purchaseDate).format("DD/MM/YYYY")}
             </span>
           </div>
         </div>
 
         {isExpanded && item.items && item.items.length > 0 && (
-          <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 text-[11px] flex flex-col gap-1.5 mt-1">
-            <span className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[9px] tracking-wider mb-1">Items Bought:</span>
+          <div className="p-2.5 bg-slate-50/50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 text-[10px] flex flex-col gap-1.5 mt-0.5">
+            <span className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[8px] tracking-wider mb-0.5">Items Bought:</span>
             {item.items.map((it: any) => (
-              <div key={it.id} className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/40 pb-1 last:border-0 last:pb-0">
-                <span className="font-semibold text-slate-850 dark:text-slate-200">{it.productName}</span>
-                <span className="text-slate-500 dark:text-slate-450 font-semibold">{it.quantity} {it.unitName || "Bxs"} × ₹{it.purchaseRate}</span>
+              <div key={it.id} className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/40 pb-1 last:border-0 last:pb-0 font-semibold">
+                <span className="text-slate-800 dark:text-slate-205">{it.productName}</span>
+                <span className="text-slate-500 dark:text-slate-450">{it.quantity} {it.unitName || "Bxs"} × ₹{it.purchaseRate}</span>
               </div>
             ))}
           </div>
         )}
 
-        <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-2 mt-1">
-          <div className="flex gap-2">
+        <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-2 mt-0.5">
+          <div className="flex gap-1.5 shrink-0">
             <span
-              className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
                 item.status === "COMPLETED"
                   ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
                   : item.status === "DRAFT"
@@ -399,7 +401,7 @@ export default function PurchasesPage() {
               {item.status}
             </span>
             <span
-              className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
                 item.paymentStatus === "PAID"
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
                   : item.paymentStatus === "PARTIALLY_PAID"
@@ -411,19 +413,19 @@ export default function PurchasesPage() {
             </span>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2 items-center shrink-0">
             <button
               onClick={() => toggleRow(item.id)}
-              className="text-xs font-bold text-blue-600 hover:underline"
+              className="text-[10px] font-bold text-blue-650 hover:underline px-2 py-1 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg shrink-0"
             >
               {isExpanded ? "Hide items" : "Show items"}
             </button>
             <Link
               href={`/trading/purchases/${item.id}`}
-              className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800"
+              className="text-[10px] font-bold text-slate-900 dark:text-white flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0"
             >
               <span>Report</span>
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
         </div>
@@ -450,39 +452,45 @@ export default function PurchasesPage() {
       />
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card title="Total Purchases" subtitle="Value of completed invoices">
-          <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="p-2 bg-slate-900 text-white rounded-xl dark:bg-slate-50 dark:text-slate-900 shadow-sm">
-              <ShoppingBag className="w-4.5 h-4.5" />
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-4 md:grid-cols-3">
+        {/* Total Purchases Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-105 dark:border-slate-850 p-2.5 sm:p-4 flex flex-col justify-between shadow-xs">
+          <span className="text-[9px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider line-clamp-1">Total Purchases</span>
+          <div className="flex items-center gap-1.5 sm:gap-2.5 mt-1 sm:mt-1.5">
+            <div className="p-1 sm:p-2 bg-slate-905 text-white dark:bg-slate-50 dark:text-slate-905 rounded-lg shrink-0">
+              <ShoppingBag className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
             </div>
-            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
-              ₹{metrics.totalPurchases.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            <span className="text-xs sm:text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 truncate">
+              ₹{metrics.totalPurchases.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
             </span>
           </div>
-        </Card>
+        </div>
+        
+        {/* Today's Purchases Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-105 dark:border-slate-855 p-2.5 sm:p-4 flex flex-col justify-between shadow-xs">
+          <span className="text-[9px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider line-clamp-1">Today's Bills</span>
+          <div className="flex items-center gap-1.5 sm:gap-2.5 mt-1 sm:mt-1.5">
+            <div className="p-1 sm:p-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-450 rounded-lg shrink-0">
+              <Calendar className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+            </div>
+            <span className="text-xs sm:text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 truncate">
+              ₹{metrics.todayPurchases.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
+            </span>
+          </div>
+        </div>
 
-        <Card title="Today's Purchases" subtitle="Total purchases registered today">
-          <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl dark:bg-emerald-950/20 dark:text-emerald-400">
-              <Calendar className="w-4.5 h-4.5" />
+        {/* Pending Payments Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-105 dark:border-slate-855 p-2.5 sm:p-4 flex flex-col justify-between shadow-xs">
+          <span className="text-[9px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider line-clamp-1">Pending Due</span>
+          <div className="flex items-center gap-1.5 sm:gap-2.5 mt-1 sm:mt-1.5">
+            <div className="p-1 sm:p-2 bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 rounded-lg shrink-0">
+              <TrendingDown className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
             </div>
-            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
-              ₹{metrics.todayPurchases.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            <span className="text-xs sm:text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 truncate">
+              ₹{metrics.pendingPayments.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
             </span>
           </div>
-        </Card>
-
-        <Card title="Pending Payments" subtitle="Outstanding purchase due value">
-          <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="p-2 bg-amber-50 text-amber-600 rounded-xl dark:bg-amber-950/20 dark:text-amber-400">
-              <TrendingDown className="w-4.5 h-4.5" />
-            </div>
-            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
-              ₹{metrics.pendingPayments.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-        </Card>
+        </div>
       </div>
 
       {/* Filters & Listing panel */}

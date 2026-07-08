@@ -142,15 +142,15 @@ export default function ManufacturingDashboardPage() {
       />
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-6">
         {kpis.map((kpi) => (
           <Card
             key={kpi.title}
-            className={`border-l-4 ${kpi.color} p-4 bg-white dark:bg-slate-900 shadow-md rounded-2xl`}
+            className={`border-l-4 ${kpi.color}`}
             title={kpi.title}
             subtitle={kpi.subtitle}
           >
-            <span className={`text-lg sm:text-xl font-extrabold tracking-tight block mt-1.5 ${kpi.textColor}`}>
+            <span className={`text-base sm:text-lg font-extrabold tracking-tight block mt-1 ${kpi.textColor}`}>
               {kpi.value}
             </span>
           </Card>
