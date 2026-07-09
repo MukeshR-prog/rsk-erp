@@ -310,7 +310,7 @@ export default function PurchasesPage() {
       case "purchaseNumber":
         return <span className="font-bold text-slate-900 dark:text-white">{item.purchaseNumber}</span>;
       case "purchaseDate":
-        return <span>{new Date(item.purchaseDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>;
+        return <span>{dayjs(item.purchaseDate).format("DD MMM YYYY hh:mm A")}</span>;
       case "grandTotal":
         return <span className="font-bold">₹{item.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>;
       case "status": {
@@ -371,7 +371,7 @@ export default function PurchasesPage() {
               ₹{item.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </span>
             <span className="text-[9px] text-slate-405 dark:text-slate-500 font-semibold">
-              {dayjs(item.purchaseDate).format("DD/MM/YYYY")}
+              {dayjs(item.purchaseDate).format("DD/MM/YYYY hh:mm A")}
             </span>
           </div>
         </div>

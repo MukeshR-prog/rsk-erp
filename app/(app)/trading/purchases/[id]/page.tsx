@@ -23,7 +23,6 @@ import { Button } from "@heroui/react";
 
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
-import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 
 import { getPurchaseDetails, cancelPurchase } from "@/features/trading/purchases/actions";
@@ -421,19 +420,50 @@ export default function PurchaseDetailsPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Cancel dialog */}
-      {cancelOpen && (
-        <ConfirmDialog
-          isOpen={cancelOpen}
-          onClose={() => setCancelOpen(false)}
-          title="Cancel Purchase Invoice"
-          message={`Are you sure you want to cancel purchase invoice "${purchase.purchaseNumber}"? This will reverse all product inventory stock quantities and clear the outstanding balance from this supplier's registry.`}
-          onConfirm={handleCancelInvoice}
-          confirmText="Yes, Cancel"
-          isDanger={true}
-          isLoading={cancelPending}
+      {/* Cancel Invoice Drawer */}
+      <div
+        className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${
+          cancelOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <div
+          onClick={() => setCancelOpen(false)}
+          className={`absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ${
+            cancelOpen ? "opacity-100" : "opacity-0"
+          }`}
         />
-      )}
+        <div
+          className={`relative w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col transform transition-transform duration-300 ease-out ${
+            cancelOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-lg font-bold text-red-600">Cancel Purchase Invoice</span>
+            <button type="button" onClick={() => setCancelOpen(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4">
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
+              Are you sure you want to cancel purchase invoice <strong className="text-slate-900 dark:text-white">{purchase.purchaseNumber}</strong>?
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 p-3.5 rounded-xl border border-red-100 dark:border-red-950/30">
+              <strong>Warning:</strong> This operation is irreversible. It will reverse all associated product inventory stock movements and completely clear the remaining outstanding balance from this supplier's ledger registry.
+            </p>
+          </div>
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
+            <Button variant="ghost" onPress={() => setCancelOpen(false)}>Keep Invoice</Button>
+            <Button
+              variant="primary"
+              isPending={cancelPending}
+              onPress={handleCancelInvoice}
+              className="font-bold rounded-xl px-5 bg-red-600 hover:bg-red-700 border-none text-white"
+            >
+              {cancelPending ? "Cancelling..." : "Cancel Invoice"}
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Record Payment Drawer */}
       <div

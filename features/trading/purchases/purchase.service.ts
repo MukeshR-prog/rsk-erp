@@ -140,9 +140,10 @@ export const PurchaseService = {
             },
           },
         },
-        orderBy: {
-          purchaseDate: "desc",
-        },
+        orderBy: [
+          { purchaseDate: "desc" },
+          { createdAt: "desc" }
+        ],
         skip,
         take: limit,
       }),
