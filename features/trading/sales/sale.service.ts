@@ -445,7 +445,10 @@ export const SaleService = {
     const [items, total] = await Promise.all([
       prisma.sale.findMany({
         where,
-        orderBy: { saleDate: "desc" },
+        orderBy: [
+          { saleDate: "desc" },
+          { createdAt: "desc" }
+        ],
         skip,
         take: limit,
         include: {

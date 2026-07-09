@@ -175,7 +175,7 @@ export default function SalesPage() {
         return (
           <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium">
             <Calendar className="w-4 h-4 text-slate-450" />
-            <span>{new Date(item.saleDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+            <span>{dayjs(item.saleDate).format("DD MMM YYYY hh:mm A")}</span>
           </div>
         );
       case "status":
@@ -214,7 +214,7 @@ export default function SalesPage() {
               ₹{Number(item.grandTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </span>
             <span className="text-[9px] text-slate-405 dark:text-slate-500 font-semibold">
-              {dayjs(item.saleDate).format("DD/MM/YYYY")}
+              {dayjs(item.saleDate).format("DD/MM/YYYY hh:mm A")}
             </span>
           </div>
         </div>

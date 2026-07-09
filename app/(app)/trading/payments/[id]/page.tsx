@@ -129,9 +129,9 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
   const isSupplier = payment.paymentType === "SUPPLIER_PAYMENT";
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5 sm:gap-6">
       {/* Header */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
         <Link href={`/trading/payments?mode=${isSupplier ? "SUPPLIER" : "CUSTOMER"}`}>
           <Button
             variant="tertiary"
@@ -143,7 +143,7 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
         </Link>
         <Header
           title={`${isSupplier ? "Payment Voucher" : "Receipt Voucher"}: ${payment.paymentNumber}`}
-          subtitle={`Recorded on ${dayjs(paymentDateObj).format("DD MMM YYYY")}`}
+          subtitle={`Recorded on ${dayjs(paymentDateObj).format("DD MMM YYYY, hh:mm A")}`}
           action={
             payment.status === "COMPLETED" && (
               <Button
@@ -160,25 +160,29 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-6">
         {/* Left main: Receipt and Settlement breakdown */}
-        <div className="md:col-span-2 flex flex-col gap-6">
+        <div className="md:col-span-2 flex flex-col gap-3.5 sm:gap-6">
           {/* Amount settled */}
-          <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-850 flex flex-col items-center justify-center text-center">
-            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+          <div className="relative overflow-hidden p-4 sm:p-6 bg-gradient-to-br from-slate-900 via-slate-955 to-slate-900 dark:from-slate-900 dark:via-slate-955 dark:to-slate-900 text-white rounded-2xl sm:rounded-3xl border border-slate-800 shadow-lg flex flex-col items-center justify-center text-center">
+            {/* Ambient decorative glow */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+            
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest block">
               {isSupplier ? "Payment Amount Paid" : "Receipt Amount Collected"}
             </span>
-            <span className="text-4xl font-extrabold text-slate-900 dark:text-white block mt-2 tracking-tight">
+            <span className="text-2xl sm:text-4xl font-black text-white block mt-2.5 tracking-tight drop-shadow-sm truncate max-w-full">
               ₹{payment.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </span>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex gap-2 flex-wrap justify-center">
               <PaymentStatusBadge status={payment.status} />
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 uppercase font-mono">
+              <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-extrabold bg-white/10 backdrop-blur-md border border-white/10 uppercase tracking-wider text-slate-200">
                 {payment.paymentMethod.replace("_", " ")}
               </span>
             </div>
             {payment.status === "CANCELLED" && (
-              <div className="mt-4 p-3 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30 rounded-2xl max-w-lg w-full text-left text-xs font-medium">
+              <div className="mt-4 p-3 bg-red-500/10 text-red-200 border border-red-500/20 rounded-xl max-w-lg w-full text-left text-xs font-medium">
                 <span className="font-bold">Cancellation Reason:</span> {payment.cancellationReason || "No details provided"}
               </div>
             )}
@@ -186,22 +190,22 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
 
           {/* Details list */}
           <Card title="Transaction & Audit Details">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm mt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 text-sm mt-2">
               <div className="flex gap-3">
                 <Calendar className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
-                <div className="flex flex-col">
+                <div className="flex flex-col min-w-0">
                   <span className="text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wide">Transaction Date</span>
-                  <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5">
-                    {dayjs(paymentDateObj).format("DD MMMM YYYY")}
+                  <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5 truncate">
+                    {dayjs(paymentDateObj).format("DD MMMM YYYY, hh:mm A")}
                   </span>
                 </div>
               </div>
 
               <div className="flex gap-3">
                 <Landmark className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
-                <div className="flex flex-col">
+                <div className="flex flex-col min-w-0">
                   <span className="text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wide">Reference / Txn No.</span>
-                  <span className="text-slate-800 dark:text-slate-200 font-mono font-bold mt-0.5">
+                  <span className="text-slate-800 dark:text-slate-200 font-mono font-bold mt-0.5 truncate">
                     {payment.referenceNumber || "N/A"}
                   </span>
                 </div>
@@ -209,9 +213,9 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
 
               <div className="flex gap-3">
                 <User className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
-                <div className="flex flex-col">
+                <div className="flex flex-col min-w-0">
                   <span className="text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wide">Recorded By</span>
-                  <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5">
+                  <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5 truncate">
                     User ({payment.createdById || "System Seed"})
                   </span>
                 </div>
@@ -219,9 +223,9 @@ export default function PaymentDetailPage({ params }: PaymentDetailPageProps) {
 
               <div className="flex gap-3">
                 <Calendar className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
-                <div className="flex flex-col">
+                <div className="flex flex-col min-w-0">
                   <span className="text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wide">System Log Created</span>
-                  <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5">
+                  <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5 truncate">
                     {dayjs(createdDateObj).format("DD MMM YYYY, hh:mm A")}
                   </span>
                 </div>

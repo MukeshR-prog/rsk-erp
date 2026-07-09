@@ -71,7 +71,7 @@ export default function PaymentHistoryTable({
                 {/* Date */}
                 <td className="py-3 px-4">
                   {dayjs(payment.paymentDate).isValid()
-                    ? dayjs(payment.paymentDate).format("DD MMM YYYY")
+                    ? dayjs(payment.paymentDate).format("DD MMM YYYY hh:mm A")
                     : "Invalid Date"}
                 </td>
 

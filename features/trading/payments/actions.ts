@@ -110,9 +110,10 @@ export async function getSupplierPayments(filters: PaymentFilters) {
             },
           },
         },
-        orderBy: {
-          paymentDate: "desc",
-        },
+        orderBy: [
+          { paymentDate: "desc" },
+          { createdAt: "desc" }
+        ],
         skip,
         take: limit,
       }),
