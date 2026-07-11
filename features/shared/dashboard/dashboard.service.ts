@@ -8,9 +8,33 @@ export const DashboardService = {
    */
   async getTradingMetrics() {
     const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
+    const endOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
+    const startOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      1,
+      0,
+      0,
+      0,
+      0,
+    );
 
     // 1. Today's Purchases
     const todayPurchasesAgg = await prisma.purchase.aggregate({
@@ -68,60 +92,30 @@ export const DashboardService = {
     const todayCollections = Number(todayCollectionsAgg._sum.amount || 0);
 
     // 5. Outstanding Suppliers
-    const [suppliersOpeningBalanceAgg, completedPurchasesAgg, completedSupplierPaymentsAgg] = await Promise.all([
-      prisma.contact.aggregate({
-        where: { type: "SUPPLIER", isActive: true },
-        _sum: { openingBalance: true },
-      }),
-      prisma.purchase.aggregate({
-        where: {
-          status: "COMPLETED",
-          supplier: { isActive: true },
-        },
-        _sum: { grandTotal: true },
-      }),
-      prisma.payment.aggregate({
-        where: {
-          paymentType: "SUPPLIER_PAYMENT",
-          status: "COMPLETED",
-          contact: { isActive: true },
-        },
-        _sum: { amount: true },
-      }),
-    ]);
-
-    const suppliersOpeningBalance = Number(suppliersOpeningBalanceAgg._sum.openingBalance || 0);
-    const completedPurchasesTotal = Number(completedPurchasesAgg._sum.grandTotal || 0);
-    const completedSupplierPaymentsTotal = Number(completedSupplierPaymentsAgg._sum.amount || 0);
-    const supplierOutstanding = suppliersOpeningBalance + completedPurchasesTotal - completedSupplierPaymentsTotal;
+    const suppliers = await prisma.contact.findMany({
+      where: { type: "SUPPLIER", isActive: true },
+      select: { id: true },
+    });
+    let supplierOutstanding = 0;
+    for (const s of suppliers) {
+      supplierOutstanding += await LedgerService.getSupplierOutstanding(
+        s.id,
+        prisma,
+      );
+    }
 
     // 6. Outstanding Customers
-    const [customersOpeningBalanceAgg, completedSalesAgg, completedCustomerReceiptsAgg] = await Promise.all([
-      prisma.contact.aggregate({
-        where: { type: "CUSTOMER", isActive: true },
-        _sum: { openingBalance: true },
-      }),
-      prisma.sale.aggregate({
-        where: {
-          status: "COMPLETED",
-          customer: { isActive: true },
-        },
-        _sum: { grandTotal: true },
-      }),
-      prisma.payment.aggregate({
-        where: {
-          paymentType: "CUSTOMER_RECEIPT",
-          status: "COMPLETED",
-          contact: { isActive: true },
-        },
-        _sum: { amount: true },
-      }),
-    ]);
-
-    const customersOpeningBalance = Number(customersOpeningBalanceAgg._sum.openingBalance || 0);
-    const completedSalesTotal = Number(completedSalesAgg._sum.grandTotal || 0);
-    const completedCustomerReceiptsTotal = Number(completedCustomerReceiptsAgg._sum.amount || 0);
-    const customerOutstanding = customersOpeningBalance + completedSalesTotal - completedCustomerReceiptsTotal;
+    const customers = await prisma.contact.findMany({
+      where: { type: "CUSTOMER", isActive: true },
+      select: { id: true },
+    });
+    let customerOutstanding = 0;
+    for (const c of customers) {
+      customerOutstanding += await LedgerService.getCustomerOutstanding(
+        c.id,
+        prisma,
+      );
+    }
 
     // 7. Recent Sales (5 most recent completed sales)
     const recentSales = await prisma.sale.findMany({
@@ -156,8 +150,9 @@ export const DashboardService = {
       select: { currentStock: true, averageCost: true },
     });
     const currentStockValue = products.reduce(
-      (sum, p) => sum + Number(p.currentStock || 0) * Number(p.averageCost || 0),
-      0
+      (sum, p) =>
+        sum + Number(p.currentStock || 0) * Number(p.averageCost || 0),
+      0,
     );
 
     // 10. Low Stock Products
@@ -303,9 +298,33 @@ export const DashboardService = {
    */
   async getManufacturingMetrics() {
     const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
+    const endOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
+    const startOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      1,
+      0,
+      0,
+      0,
+      0,
+    );
     const startOfYear = new Date(today.getFullYear(), 0, 1, 0, 0, 0, 0);
 
     // 1. Today's Expenses
@@ -348,7 +367,10 @@ export const DashboardService = {
       where: { type: "FINISHED_GOOD", isActive: true },
       select: { currentStock: true },
     });
-    const currentFinishedGoodsStock = fgProducts.reduce((sum, p) => sum + Number(p.currentStock || 0), 0);
+    const currentFinishedGoodsStock = fgProducts.reduce(
+      (sum, p) => sum + Number(p.currentStock || 0),
+      0,
+    );
 
     // 7. Recent Expenses
     const recentExpenses = await prisma.manufacturingExpense.findMany({
@@ -366,7 +388,11 @@ export const DashboardService = {
 
     // 9. Low Stock Finished Goods
     const lowStockProducts = await prisma.product.findMany({
-      where: { type: "FINISHED_GOOD", isActive: true, currentStock: { lte: 10 } },
+      where: {
+        type: "FINISHED_GOOD",
+        isActive: true,
+        currentStock: { lte: 10 },
+      },
       orderBy: { currentStock: "asc" },
       take: 5,
     });
@@ -409,8 +435,24 @@ export const DashboardService = {
    */
   async getPurchaseMetrics(startDate?: string, endDate?: string) {
     const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
+    const endOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
 
     const whereAll: Prisma.PurchaseWhereInput = { status: "COMPLETED" };
     const wherePending: Prisma.PurchaseWhereInput = {
@@ -463,14 +505,24 @@ export const DashboardService = {
   /**
    * Unified P&L Report Calculations
    */
-  async getProfitLossMetrics(filter: "daily" | "weekly" | "monthly" | "yearly" | string) {
+  async getProfitLossMetrics(
+    filter: "daily" | "weekly" | "monthly" | "yearly" | string,
+  ) {
     const today = new Date();
     let startDate = new Date();
 
     if (filter === "daily") {
-      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30); // Last 30 days
+      startDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() - 30,
+      ); // Last 30 days
     } else if (filter === "weekly") {
-      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 84); // Last 12 weeks
+      startDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() - 84,
+      ); // Last 12 weeks
     } else if (filter === "monthly") {
       startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1); // Last 12 months
     } else {
@@ -499,20 +551,32 @@ export const DashboardService = {
     const getGroupKey = (date: Date): string => {
       const d = new Date(date);
       if (filter === "daily") {
-        return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+        return d.toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+        });
       } else if (filter === "weekly") {
         // Simple week number grouping
         const onejan = new Date(d.getFullYear(), 0, 1);
-        const weekNum = Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
+        const weekNum = Math.ceil(
+          ((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) /
+            7,
+        );
         return `Wk ${weekNum}-${d.getFullYear()}`;
       } else if (filter === "monthly") {
-        return d.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+        return d.toLocaleDateString("en-IN", {
+          month: "short",
+          year: "2-digit",
+        });
       } else {
         return String(d.getFullYear());
       }
     };
 
-    const dataMap: Record<string, { label: string; sales: number; purchases: number; expenses: number }> = {};
+    const dataMap: Record<
+      string,
+      { label: string; sales: number; purchases: number; expenses: number }
+    > = {};
 
     // Initialize labels chronologically
     let runner = new Date(startDate);
@@ -534,7 +598,12 @@ export const DashboardService = {
     // Force current date's key is in map
     const finalKey = getGroupKey(endRange);
     if (!dataMap[finalKey]) {
-      dataMap[finalKey] = { label: finalKey, sales: 0, purchases: 0, expenses: 0 };
+      dataMap[finalKey] = {
+        label: finalKey,
+        sales: 0,
+        purchases: 0,
+        expenses: 0,
+      };
     }
 
     // Populate Sales
@@ -573,8 +642,14 @@ export const DashboardService = {
 
     // Aggregate totals for the filter duration
     const totalSales = sales.reduce((sum, s) => sum + Number(s.grandTotal), 0);
-    const totalPurchases = purchases.reduce((sum, p) => sum + Number(p.grandTotal), 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const totalPurchases = purchases.reduce(
+      (sum, p) => sum + Number(p.grandTotal),
+      0,
+    );
+    const totalExpenses = expenses.reduce(
+      (sum, e) => sum + Number(e.amount),
+      0,
+    );
 
     const grossProfit = totalSales - totalPurchases;
     const netProfit = grossProfit - totalExpenses;
@@ -585,21 +660,34 @@ export const DashboardService = {
       select: { currentStock: true, averageCost: true },
     });
     const currentInventoryValue = products.reduce(
-      (sum, p) => sum + Number(p.currentStock || 0) * Number(p.averageCost || 0),
-      0
+      (sum, p) =>
+        sum + Number(p.currentStock || 0) * Number(p.averageCost || 0),
+      0,
     );
 
     // Sum outstanding dynamically
-    const suppliers = await prisma.contact.findMany({ where: { type: "SUPPLIER", isActive: true }, select: { id: true } });
+    const suppliers = await prisma.contact.findMany({
+      where: { type: "SUPPLIER", isActive: true },
+      select: { id: true },
+    });
     let outstandingSupplierAmount = 0;
     for (const s of suppliers) {
-      outstandingSupplierAmount += await LedgerService.getSupplierOutstanding(s.id, prisma);
+      outstandingSupplierAmount += await LedgerService.getSupplierOutstanding(
+        s.id,
+        prisma,
+      );
     }
 
-    const customers = await prisma.contact.findMany({ where: { type: "CUSTOMER", isActive: true }, select: { id: true } });
+    const customers = await prisma.contact.findMany({
+      where: { type: "CUSTOMER", isActive: true },
+      select: { id: true },
+    });
     let outstandingCustomerAmount = 0;
     for (const c of customers) {
-      outstandingCustomerAmount += await LedgerService.getCustomerOutstanding(c.id, prisma);
+      outstandingCustomerAmount += await LedgerService.getCustomerOutstanding(
+        c.id,
+        prisma,
+      );
     }
 
     return {
@@ -626,9 +714,17 @@ export const DashboardService = {
     let startDate = new Date();
 
     if (filter === "daily") {
-      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
+      startDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() - 30,
+      );
     } else if (filter === "weekly") {
-      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 84);
+      startDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() - 84,
+      );
     } else if (filter === "monthly") {
       startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1);
     } else {
@@ -637,36 +733,60 @@ export const DashboardService = {
 
     const expenses = await prisma.manufacturingExpense.findMany({
       where: { expenseDate: { gte: startDate } },
-      include: { category: true }
+      include: { category: true },
     });
 
     const production = await prisma.productionEntry.findMany({
       where: { productionDate: { gte: startDate } },
-      include: { product: true }
+      include: { product: true },
     });
 
     const getGroupKey = (date: Date): string => {
       const d = new Date(date);
       if (filter === "daily") {
-        return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+        return d.toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+        });
       } else if (filter === "weekly") {
         const onejan = new Date(d.getFullYear(), 0, 1);
-        const weekNum = Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
+        const weekNum = Math.ceil(
+          ((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) /
+            7,
+        );
         return `Wk ${weekNum}-${d.getFullYear()}`;
       } else if (filter === "monthly") {
-        return d.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+        return d.toLocaleDateString("en-IN", {
+          month: "short",
+          year: "2-digit",
+        });
       } else {
         return String(d.getFullYear());
       }
     };
 
-    const dataMap: Record<string, { label: string; expenses: number; boxes: number; pieces: number; estimatedValue: number }> = {};
+    const dataMap: Record<
+      string,
+      {
+        label: string;
+        expenses: number;
+        boxes: number;
+        pieces: number;
+        estimatedValue: number;
+      }
+    > = {};
 
     let runner = new Date(startDate);
     const endRange = new Date();
     while (runner <= endRange) {
       const key = getGroupKey(runner);
-      dataMap[key] = { label: key, expenses: 0, boxes: 0, pieces: 0, estimatedValue: 0 };
+      dataMap[key] = {
+        label: key,
+        expenses: 0,
+        boxes: 0,
+        pieces: 0,
+        estimatedValue: 0,
+      };
       if (filter === "daily") {
         runner.setDate(runner.getDate() + 1);
       } else if (filter === "weekly") {
@@ -680,7 +800,13 @@ export const DashboardService = {
 
     const finalKey = getGroupKey(endRange);
     if (!dataMap[finalKey]) {
-      dataMap[finalKey] = { label: finalKey, expenses: 0, boxes: 0, pieces: 0, estimatedValue: 0 };
+      dataMap[finalKey] = {
+        label: finalKey,
+        expenses: 0,
+        boxes: 0,
+        pieces: 0,
+        estimatedValue: 0,
+      };
     }
 
     expenses.forEach((e) => {
@@ -695,7 +821,8 @@ export const DashboardService = {
       if (dataMap[key]) {
         dataMap[key].boxes += Number(p.boxesProduced);
         dataMap[key].pieces += Number(p.totalPieces);
-        dataMap[key].estimatedValue += Number(p.boxesProduced) * Number((p as any).estimatedRate || 0.0);
+        dataMap[key].estimatedValue +=
+          Number(p.boxesProduced) * Number((p as any).estimatedRate || 0.0);
       }
     });
 
@@ -712,12 +839,28 @@ export const DashboardService = {
       const catName = e.category.name;
       catMap[catName] = (catMap[catName] || 0) + Number(e.amount);
     });
-    const expenseBreakdown = Object.entries(catMap).map(([name, value]) => ({ name, value }));
+    const expenseBreakdown = Object.entries(catMap).map(([name, value]) => ({
+      name,
+      value,
+    }));
 
-    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-    const totalBoxesProduced = production.reduce((sum, p) => sum + Number(p.boxesProduced), 0);
-    const totalPiecesProduced = production.reduce((sum, p) => sum + Number(p.totalPieces), 0);
-    const totalProductionValue = production.reduce((sum, p) => sum + Number(p.boxesProduced) * Number((p as any).estimatedRate || 0.0), 0);
+    const totalExpenses = expenses.reduce(
+      (sum, e) => sum + Number(e.amount),
+      0,
+    );
+    const totalBoxesProduced = production.reduce(
+      (sum, p) => sum + Number(p.boxesProduced),
+      0,
+    );
+    const totalPiecesProduced = production.reduce(
+      (sum, p) => sum + Number(p.totalPieces),
+      0,
+    );
+    const totalProductionValue = production.reduce(
+      (sum, p) =>
+        sum + Number(p.boxesProduced) * Number((p as any).estimatedRate || 0.0),
+      0,
+    );
     const netProfit = totalProductionValue - totalExpenses;
 
     return {
