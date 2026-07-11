@@ -359,36 +359,36 @@ export default function SaleDetailsPage({ params }: PageProps) {
         </Link>
 
         {sale.status !== "CANCELLED" && (
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-start sm:justify-end">
             <Button
               variant="ghost"
               onPress={handlePrintReceipt}
-              className="rounded-xl text-xs font-bold border-slate-200 text-slate-750 hover:bg-slate-50 dark:border-slate-850 dark:text-slate-300"
+              className="rounded-xl text-xs font-bold border-slate-205 text-slate-755 hover:bg-slate-50 dark:border-slate-850 dark:text-slate-300 flex-1 sm:flex-none justify-center text-center py-2"
             >
-              <Printer className="w-4 h-4 mr-1.5" />
+              <Printer className="w-4 h-4 mr-1.5 shrink-0" />
               <span>Print Invoice</span>
             </Button>
             <Button
               variant="ghost"
               onPress={() => setEditOpen(true)}
-              className="rounded-xl text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-850 dark:text-slate-300"
+              className="rounded-xl text-xs font-bold border-slate-205 text-slate-700 hover:bg-slate-50 dark:border-slate-850 dark:text-slate-300 flex-1 sm:flex-none justify-center text-center py-2"
             >
-              Revise Invoice
+              <span>Revise Invoice</span>
             </Button>
             <Button
               variant="danger"
               onPress={() => setCancelOpen(true)}
-              className="rounded-xl text-xs font-bold text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 border-none"
+              className="rounded-xl text-xs font-bold text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 border-none flex-1 sm:flex-none justify-center text-center py-2"
             >
-              Cancel Sale
+              <span>Cancel Sale</span>
             </Button>
             {dueAmount > 0.01 && sale.status === "COMPLETED" && (
               <Button
                 variant="primary"
                 onPress={() => setIsReceiptModalOpen(true)}
-                className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 border-none text-white px-4"
+                className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 border-none text-white px-4 flex-1 sm:flex-none justify-center text-center py-2 min-w-full sm:min-w-0"
               >
-                Record Receipt
+                <span>Record Receipt</span>
               </Button>
             )}
           </div>

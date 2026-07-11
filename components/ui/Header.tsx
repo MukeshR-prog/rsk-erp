@@ -26,8 +26,8 @@ export default function Header({ title, subtitle, action, backHref }: HeaderProp
             </Button>
           </Link>
         )}
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight sm:text-3xl truncate">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-50 tracking-tight leading-tight break-words">
             {title}
           </h1>
           {subtitle && (
