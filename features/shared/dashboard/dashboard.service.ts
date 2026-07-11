@@ -68,24 +68,60 @@ export const DashboardService = {
     const todayCollections = Number(todayCollectionsAgg._sum.amount || 0);
 
     // 5. Outstanding Suppliers
-    const suppliers = await prisma.contact.findMany({
-      where: { type: "SUPPLIER", isActive: true },
-      select: { id: true },
-    });
-    let supplierOutstanding = 0;
-    for (const s of suppliers) {
-      supplierOutstanding += await LedgerService.getSupplierOutstanding(s.id, prisma);
-    }
+    const [suppliersOpeningBalanceAgg, completedPurchasesAgg, completedSupplierPaymentsAgg] = await Promise.all([
+      prisma.contact.aggregate({
+        where: { type: "SUPPLIER", isActive: true },
+        _sum: { openingBalance: true },
+      }),
+      prisma.purchase.aggregate({
+        where: {
+          status: "COMPLETED",
+          supplier: { isActive: true },
+        },
+        _sum: { grandTotal: true },
+      }),
+      prisma.payment.aggregate({
+        where: {
+          paymentType: "SUPPLIER_PAYMENT",
+          status: "COMPLETED",
+          contact: { isActive: true },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const suppliersOpeningBalance = Number(suppliersOpeningBalanceAgg._sum.openingBalance || 0);
+    const completedPurchasesTotal = Number(completedPurchasesAgg._sum.grandTotal || 0);
+    const completedSupplierPaymentsTotal = Number(completedSupplierPaymentsAgg._sum.amount || 0);
+    const supplierOutstanding = suppliersOpeningBalance + completedPurchasesTotal - completedSupplierPaymentsTotal;
 
     // 6. Outstanding Customers
-    const customers = await prisma.contact.findMany({
-      where: { type: "CUSTOMER", isActive: true },
-      select: { id: true },
-    });
-    let customerOutstanding = 0;
-    for (const c of customers) {
-      customerOutstanding += await LedgerService.getCustomerOutstanding(c.id, prisma);
-    }
+    const [customersOpeningBalanceAgg, completedSalesAgg, completedCustomerReceiptsAgg] = await Promise.all([
+      prisma.contact.aggregate({
+        where: { type: "CUSTOMER", isActive: true },
+        _sum: { openingBalance: true },
+      }),
+      prisma.sale.aggregate({
+        where: {
+          status: "COMPLETED",
+          customer: { isActive: true },
+        },
+        _sum: { grandTotal: true },
+      }),
+      prisma.payment.aggregate({
+        where: {
+          paymentType: "CUSTOMER_RECEIPT",
+          status: "COMPLETED",
+          contact: { isActive: true },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const customersOpeningBalance = Number(customersOpeningBalanceAgg._sum.openingBalance || 0);
+    const completedSalesTotal = Number(completedSalesAgg._sum.grandTotal || 0);
+    const completedCustomerReceiptsTotal = Number(completedCustomerReceiptsAgg._sum.amount || 0);
+    const customerOutstanding = customersOpeningBalance + completedSalesTotal - completedCustomerReceiptsTotal;
 
     // 7. Recent Sales (5 most recent completed sales)
     const recentSales = await prisma.sale.findMany({
