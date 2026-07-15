@@ -549,12 +549,14 @@ function PaymentsPageContent() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-6 py-6">
-              <PaymentForm
-                mode={mode}
-                contacts={contacts}
-                onSuccess={handleCreateSuccess}
-                onCancel={() => setIsNewModalOpen(false)}
-              />
+              {isNewModalOpen && (
+                <PaymentForm
+                  mode={mode}
+                  contacts={contacts}
+                  onSuccess={handleCreateSuccess}
+                  onCancel={() => setIsNewModalOpen(false)}
+                />
+              )}
             </div>
           </div>
         </div>
