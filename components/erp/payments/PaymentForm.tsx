@@ -188,10 +188,26 @@ export default function PaymentForm({
       return;
     }
 
+    // Combine selected date with current local time to capture correct transaction time
+    const now = dayjs();
+    let finalDate = dayjs(values.paymentDate);
+    if (finalDate.isValid()) {
+      finalDate = finalDate
+        .hour(now.hour())
+        .minute(now.minute())
+        .second(now.second())
+        .millisecond(now.millisecond());
+    }
+
+    const submissionValues = {
+      ...values,
+      paymentDate: finalDate.isValid() ? finalDate.toISOString() : values.paymentDate,
+    };
+
     startTransition(async () => {
       const res = isSupplier
-        ? await createSupplierPaymentAction(values)
-        : await createCustomerReceiptAction(values);
+        ? await createSupplierPaymentAction(submissionValues)
+        : await createCustomerReceiptAction(submissionValues);
 
       if (res.success && res.data) {
         toast.success(
@@ -363,16 +379,13 @@ export default function PaymentForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Date Input */}
-        <TextField
-          isInvalid={!!errors.paymentDate}
-          className="flex flex-col gap-1 w-full"
-        >
-          <Label className="text-sm font-semibold text-slate-700 dark:text-slate-350">
+        <div className="flex flex-col gap-1.5 w-full">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-350">
             {isSupplier ? "Payment Date" : "Receipt Date"}
-          </Label>
-          <Input
+          </label>
+          <input
             type="date"
-            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 dark:focus:border-slate-100 outline-none text-sm"
+            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 dark:focus:border-slate-100 outline-none text-sm font-semibold text-slate-900 dark:text-white"
             {...register("paymentDate")}
           />
           {errors.paymentDate && (
@@ -380,7 +393,7 @@ export default function PaymentForm({
               {String(errors.paymentDate.message)}
             </span>
           )}
-        </TextField>
+        </div>
 
         {/* Payment Method */}
         <div className="flex flex-col gap-1.5 w-full">
