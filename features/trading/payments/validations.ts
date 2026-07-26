@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const createPaymentSchema = z.object({
   contactId: z.string().uuid("Please select a valid supplier."),
-  purchaseId: z.string().uuid("Please select a valid purchase invoice."),
+  purchaseId: z.string().uuid().optional().or(z.literal("")),
   amount: z
     .number()
     .positive("Payment amount must be greater than zero.")
@@ -33,7 +33,7 @@ export const cancelPaymentSchema = z.object({
 
 export const createReceiptSchema = z.object({
   contactId: z.string().uuid("Please select a valid customer."),
-  saleId: z.string().uuid("Please select a valid sale invoice."),
+  saleId: z.string().uuid().optional().or(z.literal("")),
   amount: z
     .number()
     .positive("Receipt amount must be greater than zero.")

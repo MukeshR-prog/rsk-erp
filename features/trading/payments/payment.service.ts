@@ -141,78 +141,6 @@ export const PaymentService = {
     if (data.amount <= 0) {
       throw new Error("Payment transaction amount must be greater than zero.");
     }
-
-    // 3. Skip invoice-specific validations if it's an advance payment
-    if (data.isAdvance) {
-      return;
-    }
-
-    // 4. Validate referenced invoice links
-    if (data.paymentType === "SUPPLIER_PAYMENT") {
-      if (!data.purchaseId) {
-        throw new Error("Purchase invoice ID is required for non-advance supplier payments.");
-      }
-
-      const purchase = await tx.purchase.findUnique({
-        where: { id: data.purchaseId },
-        select: { supplierId: true, grandTotal: true, status: true },
-      });
-
-      if (!purchase) {
-        throw new Error("The referenced purchase invoice does not exist.");
-      }
-      if (purchase.supplierId !== data.contactId) {
-        throw new Error("The referenced purchase invoice does not match the selected supplier.");
-      }
-      if (purchase.status === "CANCELLED") {
-        throw new Error("Cannot record payments against a cancelled purchase invoice.");
-      }
-
-      const totalPaid = await this.calculatePaidAmount(tx, {
-        purchaseId: data.purchaseId,
-        paymentType: "SUPPLIER_PAYMENT",
-      });
-      const grandTotal = Number(purchase.grandTotal);
-      const remainingBalance = Math.max(0, grandTotal - totalPaid);
-
-      if (data.amount > remainingBalance + 0.01) {
-        throw new Error(
-          `Payment amount (₹${data.amount.toFixed(2)}) exceeds the remaining balance (₹${remainingBalance.toFixed(2)}) on this invoice.`
-        );
-      }
-    } else if (data.paymentType === "CUSTOMER_RECEIPT") {
-      if (!data.saleId) {
-        throw new Error("Sale invoice ID is required for non-advance customer receipts.");
-      }
-
-      const sale = await tx.sale.findUnique({
-        where: { id: data.saleId },
-        select: { customerId: true, grandTotal: true, status: true },
-      });
-
-      if (!sale) {
-        throw new Error("The referenced sale invoice does not exist.");
-      }
-      if (sale.customerId !== data.contactId) {
-        throw new Error("The referenced sale invoice does not match the selected customer.");
-      }
-      if (sale.status === "CANCELLED") {
-        throw new Error("Cannot record receipts against a cancelled sale invoice.");
-      }
-
-      const totalPaid = await this.calculatePaidAmount(tx, {
-        saleId: data.saleId,
-        paymentType: "CUSTOMER_RECEIPT",
-      });
-      const grandTotal = Number(sale.grandTotal);
-      const remainingBalance = Math.max(0, grandTotal - totalPaid);
-
-      if (data.amount > remainingBalance + 0.01) {
-        throw new Error(
-          `Receipt amount (₹${data.amount.toFixed(2)}) exceeds the remaining balance (₹${remainingBalance.toFixed(2)}) on this invoice.`
-        );
-      }
-    }
   },
 
   /**
@@ -248,11 +176,13 @@ export const PaymentService = {
       },
     });
 
-    // Update parent invoice payment status
-    await this.updateTransactionPaymentStatus(tx, {
-      purchaseId: data.purchaseId,
-      saleId: data.saleId,
-    });
+    // Update parent invoice payment status if invoice link is present
+    if (data.purchaseId || data.saleId) {
+      await this.updateTransactionPaymentStatus(tx, {
+        purchaseId: data.purchaseId,
+        saleId: data.saleId,
+      });
+    }
 
     return payment;
   },

@@ -9,7 +9,7 @@ export const NumberGeneratorService = {
    * Generates the next sequential document number for the current year.
    */
   async generateNumber(
-    prefix: "PUR" | "PAY" | "SAL" | "PRD" | "EXP",
+    prefix: "PUR" | "PAY" | "SAL" | "EXP",
     tx: Prisma.TransactionClient
   ): Promise<string> {
     const currentYear = new Date().getFullYear();
@@ -45,15 +45,7 @@ export const NumberGeneratorService = {
         lastNumber = last?.saleNumber || null;
         break;
       }
-      case "PRD": {
-        const last = await tx.productionEntry.findFirst({
-          where: { productionNumber: { startsWith: yearPrefix } },
-          orderBy: { productionNumber: "desc" },
-          select: { productionNumber: true },
-        });
-        lastNumber = last?.productionNumber || null;
-        break;
-      }
+
       case "EXP": {
         const last = await tx.manufacturingExpense.findFirst({
           where: { expenseNumber: { startsWith: yearPrefix } },

@@ -508,6 +508,27 @@ export async function getPendingCustomerSales(customerId: string) {
 }
 
 /**
+ * Fetch total transactions, total payments, and outstanding balance for a contact.
+ */
+export async function getContactSummaryAction(contactId: string, mode: "SUPPLIER" | "CUSTOMER") {
+  try {
+    if (!contactId) {
+      return { success: false, error: "Contact ID is required." };
+    }
+    if (mode === "SUPPLIER") {
+      const summary = await LedgerService.getSupplierSummary(contactId, prisma);
+      return { success: true, data: summary };
+    } else {
+      const summary = await LedgerService.getCustomerSummary(contactId, prisma);
+      return { success: true, data: summary };
+    }
+  } catch (err: any) {
+    console.error("getContactSummaryAction failed:", err);
+    return { success: false, error: err.message || "Failed to retrieve contact summary." };
+  }
+}
+
+/**
  * Fetch KPI metrics for the Payments Dashboard (Supplier or Customer).
  */
 export async function getPaymentDashboardMetrics(

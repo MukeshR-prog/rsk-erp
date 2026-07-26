@@ -88,8 +88,7 @@ export default function Sidebar() {
   const manufacturingItems = [
     { label: "Dashboard", href: "/manufacturing", icon: LayoutDashboard },
     { label: "Expenses", href: "/manufacturing/expenses", icon: Receipt },
-    { label: "Production", href: "/manufacturing/production", icon: Factory },
-    { label: "Finished Goods Stock", href: "/manufacturing/stock", icon: Package },
+    { label: "Sales Entry", href: "/manufacturing/sales", icon: TrendingUp },
     { label: "Reports", href: "/manufacturing/reports", icon: BarChart3 },
   ];
 
