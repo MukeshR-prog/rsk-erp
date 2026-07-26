@@ -27,7 +27,7 @@ export default function BottomNav() {
 
   const manufacturingItems = [
     { label: "Home", href: "/manufacturing", icon: LayoutDashboard },
-    { label: "Production", href: "/manufacturing/production", icon: Factory },
+    { label: "Sales Entry", href: "/manufacturing/sales", icon: TrendingUp },
   ];
 
   const items = activeWorkspace === "manufacturing" ? manufacturingItems : tradingItems;

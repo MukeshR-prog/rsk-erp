@@ -325,85 +325,108 @@ export const DashboardService = {
       0,
       0,
     );
+    const endOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
     const startOfYear = new Date(today.getFullYear(), 0, 1, 0, 0, 0, 0);
+    const endOfYear = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
 
-    // 1. Today's Expenses
+    // 1. Expenses Today, Month, Year
     const expensesTodayAgg = await prisma.manufacturingExpense.aggregate({
       where: { expenseDate: { gte: startOfToday, lte: endOfToday } },
       _sum: { amount: true },
     });
     const todayExpenses = Number(expensesTodayAgg._sum.amount || 0);
 
-    // 2. Monthly Expenses
     const expensesMonthAgg = await prisma.manufacturingExpense.aggregate({
-      where: { expenseDate: { gte: startOfMonth, lte: endOfToday } },
+      where: { expenseDate: { gte: startOfMonth, lte: endOfMonth } },
       _sum: { amount: true },
     });
     const monthlyExpenses = Number(expensesMonthAgg._sum.amount || 0);
 
-    // 3. Yearly Expenses
     const expensesYearAgg = await prisma.manufacturingExpense.aggregate({
-      where: { expenseDate: { gte: startOfYear, lte: endOfToday } },
+      where: { expenseDate: { gte: startOfYear, lte: endOfYear } },
       _sum: { amount: true },
     });
     const yearlyExpenses = Number(expensesYearAgg._sum.amount || 0);
 
-    // 4. Today's Production (Boxes)
-    const productionTodayAgg = await prisma.productionEntry.aggregate({
-      where: { productionDate: { gte: startOfToday, lte: endOfToday } },
-      _sum: { boxesProduced: true },
+    // 2. Manufacturing Sales Month, Year
+    const salesMonthAgg = await prisma.manufacturingSale.aggregate({
+      where: { saleDate: { gte: startOfMonth, lte: endOfMonth } },
+      _sum: { amount: true },
     });
-    const productionToday = Number(productionTodayAgg._sum.boxesProduced || 0);
+    const monthlySales = Number(salesMonthAgg._sum.amount || 0);
 
-    // 5. Monthly Production (Boxes)
-    const productionMonthAgg = await prisma.productionEntry.aggregate({
-      where: { productionDate: { gte: startOfMonth, lte: endOfToday } },
-      _sum: { boxesProduced: true },
+    const salesYearAgg = await prisma.manufacturingSale.aggregate({
+      where: { saleDate: { gte: startOfYear, lte: endOfYear } },
+      _sum: { amount: true },
     });
-    const productionMonth = Number(productionMonthAgg._sum.boxesProduced || 0);
+    const yearlySales = Number(salesYearAgg._sum.amount || 0);
 
-    // 6. Current Finished Goods Stock
-    const fgProducts = await prisma.product.findMany({
-      where: { type: "FINISHED_GOOD", isActive: true },
-      select: { currentStock: true },
-    });
-    const currentFinishedGoodsStock = fgProducts.reduce(
-      (sum, p) => sum + Number(p.currentStock || 0),
-      0,
-    );
+    // 3. Profit Calculations
+    const monthlyProfit = monthlySales - monthlyExpenses;
+    const yearlyProfit = yearlySales - yearlyExpenses;
 
-    // 7. Recent Expenses
+    // 4. Recent Expenses & Recent Manufacturing Sales
     const recentExpenses = await prisma.manufacturingExpense.findMany({
       take: 5,
       orderBy: { expenseDate: "desc" },
       include: { category: true },
     });
 
-    // 8. Recent Production Entries
-    const recentProduction = await prisma.productionEntry.findMany({
+    const recentSales = await prisma.manufacturingSale.findMany({
       take: 5,
-      orderBy: { productionDate: "desc" },
-      include: { product: true },
+      orderBy: { saleDate: "desc" },
     });
 
-    // 9. Low Stock Finished Goods
-    const lowStockProducts = await prisma.product.findMany({
-      where: {
-        type: "FINISHED_GOOD",
-        isActive: true,
-        currentStock: { lte: 10 },
-      },
-      orderBy: { currentStock: "asc" },
-      take: 5,
+    // 5. Chart Data (Monthly trends for current year)
+    const monthlyTrendsMap: Record<number, { monthName: string; sales: number; expenses: number; profit: number }> = {};
+    for (let m = 0; m < 12; m++) {
+      const d = new Date(today.getFullYear(), m, 1);
+      const name = d.toLocaleDateString("en-IN", { month: "short" });
+      monthlyTrendsMap[m] = { monthName: name, sales: 0, expenses: 0, profit: 0 };
+    }
+
+    const yearExpenses = await prisma.manufacturingExpense.findMany({
+      where: { expenseDate: { gte: startOfYear, lte: endOfYear } },
     });
+    yearExpenses.forEach((e) => {
+      const m = new Date(e.expenseDate).getMonth();
+      if (monthlyTrendsMap[m]) {
+        monthlyTrendsMap[m].expenses += Number(e.amount);
+      }
+    });
+
+    const yearSales = await prisma.manufacturingSale.findMany({
+      where: { saleDate: { gte: startOfYear, lte: endOfYear } },
+    });
+    yearSales.forEach((s: any) => {
+      const m = new Date(s.saleDate).getMonth();
+      if (monthlyTrendsMap[m]) {
+        monthlyTrendsMap[m].sales += Number(s.amount);
+      }
+    });
+
+    const trendData = Object.values(monthlyTrendsMap).map((x) => ({
+      ...x,
+      profit: x.sales - x.expenses,
+    }));
 
     return {
       todayExpenses,
       monthlyExpenses,
       yearlyExpenses,
-      productionToday,
-      productionMonth,
-      currentFinishedGoodsStock,
+      monthlySales,
+      yearlySales,
+      monthlyProfit,
+      yearlyProfit,
+      trendData,
       recentExpenses: recentExpenses.map((x) => ({
         id: x.id,
         number: x.expenseNumber,
@@ -412,20 +435,11 @@ export const DashboardService = {
         amount: Number(x.amount),
         date: x.expenseDate.toISOString(),
       })),
-      recentProduction: recentProduction.map((x) => ({
+      recentSales: recentSales.map((x: any) => ({
         id: x.id,
-        number: x.productionNumber,
-        productName: x.product.name,
-        boxesProduced: Number(x.boxesProduced),
-        piecesPerBox: x.piecesPerBox,
-        totalPieces: Number(x.totalPieces),
-        date: x.productionDate.toISOString(),
-      })),
-      lowStockProducts: lowStockProducts.map((p) => ({
-        id: p.id,
-        name: p.name,
-        code: p.code,
-        currentStock: Number(p.currentStock),
+        amount: Number(x.amount),
+        description: x.description,
+        date: x.saleDate.toISOString(),
       })),
     };
   },
@@ -736,9 +750,8 @@ export const DashboardService = {
       include: { category: true },
     });
 
-    const production = await prisma.productionEntry.findMany({
-      where: { productionDate: { gte: startDate } },
-      include: { product: true },
+    const sales = await prisma.manufacturingSale.findMany({
+      where: { saleDate: { gte: startDate } },
     });
 
     const getGroupKey = (date: Date): string => {
@@ -770,9 +783,8 @@ export const DashboardService = {
       {
         label: string;
         expenses: number;
-        boxes: number;
-        pieces: number;
-        estimatedValue: number;
+        sales: number;
+        netProfit: number;
       }
     > = {};
 
@@ -783,9 +795,8 @@ export const DashboardService = {
       dataMap[key] = {
         label: key,
         expenses: 0,
-        boxes: 0,
-        pieces: 0,
-        estimatedValue: 0,
+        sales: 0,
+        netProfit: 0,
       };
       if (filter === "daily") {
         runner.setDate(runner.getDate() + 1);
@@ -803,9 +814,8 @@ export const DashboardService = {
       dataMap[finalKey] = {
         label: finalKey,
         expenses: 0,
-        boxes: 0,
-        pieces: 0,
-        estimatedValue: 0,
+        sales: 0,
+        netProfit: 0,
       };
     }
 
@@ -816,21 +826,18 @@ export const DashboardService = {
       }
     });
 
-    production.forEach((p) => {
-      const key = getGroupKey(p.productionDate);
+    sales.forEach((s: any) => {
+      const key = getGroupKey(s.saleDate);
       if (dataMap[key]) {
-        dataMap[key].boxes += Number(p.boxesProduced);
-        dataMap[key].pieces += Number(p.totalPieces);
-        dataMap[key].estimatedValue +=
-          Number(p.boxesProduced) * Number((p as any).estimatedRate || 0.0);
+        dataMap[key].sales += Number(s.amount);
       }
     });
 
     const chartData = Object.values(dataMap).map((item) => {
-      const profit = item.estimatedValue - item.expenses;
+      const netProfit = item.sales - item.expenses;
       return {
         ...item,
-        profit,
+        netProfit,
       };
     });
 
@@ -848,27 +855,16 @@ export const DashboardService = {
       (sum, e) => sum + Number(e.amount),
       0,
     );
-    const totalBoxesProduced = production.reduce(
-      (sum, p) => sum + Number(p.boxesProduced),
+    const totalSales = sales.reduce(
+      (sum: number, s: any) => sum + Number(s.amount),
       0,
     );
-    const totalPiecesProduced = production.reduce(
-      (sum, p) => sum + Number(p.totalPieces),
-      0,
-    );
-    const totalProductionValue = production.reduce(
-      (sum, p) =>
-        sum + Number(p.boxesProduced) * Number((p as any).estimatedRate || 0.0),
-      0,
-    );
-    const netProfit = totalProductionValue - totalExpenses;
+    const netProfit = totalSales - totalExpenses;
 
     return {
       summary: {
         totalExpenses,
-        totalBoxesProduced,
-        totalPiecesProduced,
-        totalProductionValue,
+        totalSales,
         netProfit,
       },
       expenseBreakdown,

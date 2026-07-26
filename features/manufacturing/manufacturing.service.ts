@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { InventoryService } from "@/features/inventory/inventory.service";
 import { NumberGeneratorService } from "@/features/shared/services/numberGenerator.service";
-import { resolveDynamicProduct } from "@/features/shared/utils/dynamicOptions";
 
 export interface CreateExpenseInput {
   categoryId: string;
@@ -21,23 +19,17 @@ export interface UpdateExpenseInput {
   expenseDate: Date;
 }
 
-export interface CreateProductionInput {
-  productId: string;
-  boxesProduced: number;
-  piecesPerBox: number;
-  estimatedRate?: number;
-  notes?: string | null;
-  productionDate: Date;
+export interface CreateManufacturingSaleInput {
+  saleDate: Date;
+  amount: number;
+  description?: string | null;
 }
 
-export interface UpdateProductionInput {
+export interface UpdateManufacturingSaleInput {
   id: string;
-  productId: string;
-  boxesProduced: number;
-  piecesPerBox: number;
-  estimatedRate?: number;
-  notes?: string | null;
-  productionDate: Date;
+  saleDate: Date;
+  amount: number;
+  description?: string | null;
 }
 
 export const ManufacturingService = {
@@ -47,10 +39,8 @@ export const ManufacturingService = {
 
   async createExpense(data: CreateExpenseInput) {
     return prisma.$transaction(async (tx) => {
-      // 1. Generate sequential expense code
       const expenseNumber = await NumberGeneratorService.generateNumber("EXP", tx);
 
-      // 2. Create the expense entry
       const expense = await tx.manufacturingExpense.create({
         data: {
           expenseNumber,
@@ -175,248 +165,99 @@ export const ManufacturingService = {
   },
 
   // =========================================================================
-  // Production Entry CRUD
+  // Manufacturing Sales Revenue CRUD
   // =========================================================================
 
-  async createProductionEntry(data: CreateProductionInput) {
-    return prisma.$transaction(async (tx) => {
-      // 0. Resolve dynamic product if needed
-      let productId = data.productId;
-      if (productId.startsWith("NEW_OPTION:")) {
-        productId = await resolveDynamicProduct(productId, tx, "FINISHED_GOOD");
-        data.productId = productId;
-      }
-
-      // 1. Verify finished goods product
-      const product = await tx.product.findUnique({
-        where: { id: data.productId },
-        select: { id: true, type: true, currentStock: true, name: true },
-      });
-
-      if (!product) {
-        throw new Error(`Product not found with ID: ${data.productId}`);
-      }
-
-      if (product.type !== "FINISHED_GOOD" && product.type !== "TRADING_PRODUCT") {
-        throw new Error(`Only Finished Goods or Trading Products can be produced. Product "${product.name}" is a ${product.type}.`);
-      }
-
-      // 2. Compute total pieces
-      const totalPieces = data.boxesProduced * data.piecesPerBox;
-
-      // 3. Generate sequential production code
-      const productionNumber = await NumberGeneratorService.generateNumber("PRD", tx);
-
-      // 4. Create database entry
-      const entry = await tx.productionEntry.create({
-        data: {
-          productionNumber,
-          productId: data.productId,
-          boxesProduced: new Prisma.Decimal(data.boxesProduced),
-          piecesPerBox: data.piecesPerBox,
-          totalPieces: new Prisma.Decimal(totalPieces),
-          estimatedRate: new Prisma.Decimal(data.estimatedRate || 0.0),
-          productionDate: data.productionDate,
-          notes: data.notes || null,
-        } as any,
-      });
-
-      // 5. Increase inventory stock using InventoryService
-      await InventoryService.increaseStock(
-        tx,
-        data.productId,
-        data.boxesProduced,
-        "PRODUCTION_OUTPUT",
-        entry.id,
-        `Production Log: ${productionNumber}`
-      );
-
-      // 6. Optional: Update piecesPerBox default on product if it was changed
-      await tx.product.update({
-        where: { id: data.productId },
-        data: {
-          piecesPerBox: data.piecesPerBox,
-        },
-      });
-
-      return entry;
+  async createManufacturingSale(data: CreateManufacturingSaleInput) {
+    const sale = await prisma.manufacturingSale.create({
+      data: {
+        saleDate: data.saleDate,
+        amount: new Prisma.Decimal(data.amount),
+        description: data.description || null,
+      },
     });
+
+    return {
+      ...sale,
+      amount: Number(sale.amount),
+    };
   },
 
-  async updateProductionEntry(data: UpdateProductionInput) {
-    return prisma.$transaction(async (tx) => {
-      // 1. Fetch existing production entry
-      const existing = await tx.productionEntry.findUnique({
-        where: { id: data.id },
-      });
-
-      if (!existing) {
-        throw new Error(`Production entry not found with ID: ${data.id}`);
-      }
-
-      // 2. Validate product
-      const product = await tx.product.findUnique({
-        where: { id: data.productId },
-        select: { id: true, type: true, name: true },
-      });
-
-      if (!product) {
-        throw new Error(`Product not found with ID: ${data.productId}`);
-      }
-
-      if (product.type !== "FINISHED_GOOD" && product.type !== "TRADING_PRODUCT") {
-        throw new Error(`Product "${product.name}" must be a Finished Good or Trading Product.`);
-      }
-
-      // 3. Revert old stock increase
-      const oldQty = new Prisma.Decimal(existing.boxesProduced);
-      await InventoryService.decreaseStock(
-        tx,
-        existing.productId,
-        oldQty,
-        "PRODUCTION_OUTPUT",
-        existing.id,
-        `Reversal: Editing Production ${existing.productionNumber}`
-      );
-
-      // 4. Calculate new total pieces
-      const totalPieces = data.boxesProduced * data.piecesPerBox;
-
-      // 5. Update production entry
-      const updated = await tx.productionEntry.update({
-        where: { id: data.id },
-        data: {
-          productId: data.productId,
-          boxesProduced: new Prisma.Decimal(data.boxesProduced),
-          piecesPerBox: data.piecesPerBox,
-          totalPieces: new Prisma.Decimal(totalPieces),
-          estimatedRate: new Prisma.Decimal(data.estimatedRate || 0.0),
-          productionDate: data.productionDate,
-          notes: data.notes || null,
-        } as any,
-      });
-
-      // 6. Apply new stock increase
-      await InventoryService.increaseStock(
-        tx,
-        data.productId,
-        data.boxesProduced,
-        "PRODUCTION_OUTPUT",
-        updated.id,
-        `Production Edit: ${updated.productionNumber}`
-      );
-
-      // Update piecesPerBox default on product
-      await tx.product.update({
-        where: { id: data.productId },
-        data: {
-          piecesPerBox: data.piecesPerBox,
-        },
-      });
-
-      return updated;
+  async updateManufacturingSale(data: UpdateManufacturingSaleInput) {
+    const existing = await prisma.manufacturingSale.findUnique({
+      where: { id: data.id },
     });
+
+    if (!existing) {
+      throw new Error(`Manufacturing sale record not found with ID: ${data.id}`);
+    }
+
+    const updated = await prisma.manufacturingSale.update({
+      where: { id: data.id },
+      data: {
+        saleDate: data.saleDate,
+        amount: new Prisma.Decimal(data.amount),
+        description: data.description || null,
+      },
+    });
+
+    return {
+      ...updated,
+      amount: Number(updated.amount),
+    };
   },
 
-  async deleteProductionEntry(id: string) {
-    return prisma.$transaction(async (tx) => {
-      // 1. Fetch existing production entry
-      const existing = await tx.productionEntry.findUnique({
-        where: { id },
-      });
-
-      if (!existing) {
-        throw new Error(`Production entry not found with ID: ${id}`);
-      }
-
-      // 2. Revert stock before deletion
-      const qty = new Prisma.Decimal(existing.boxesProduced);
-      await InventoryService.decreaseStock(
-        tx,
-        existing.productId,
-        qty,
-        "PRODUCTION_OUTPUT",
-        existing.id,
-        `Reversal: Deleting Production ${existing.productionNumber}`
-      );
-
-      // 3. Delete DB record
-      await tx.productionEntry.delete({
-        where: { id },
-      });
-
-      return { success: true };
+  async deleteManufacturingSale(id: string) {
+    await prisma.manufacturingSale.delete({
+      where: { id },
     });
+
+    return { success: true };
   },
 
-  async getProductionEntries(params: {
+  async getManufacturingSales(params: {
     search?: string;
-    productId?: string;
     startDate?: Date;
     endDate?: Date;
     page?: number;
     pageSize?: number;
   }) {
-    const { search = "", productId = "", startDate, endDate, page = 1, pageSize = 10 } = params;
+    const { search = "", startDate, endDate, page = 1, pageSize = 10 } = params;
     const skip = (page - 1) * pageSize;
 
-    const where: Prisma.ProductionEntryWhereInput = {};
-
-    if (productId && productId !== "ALL") {
-      where.productId = productId;
-    }
+    const where: Prisma.ManufacturingSaleWhereInput = {};
 
     if (search) {
-      where.product = {
-        name: {
-          contains: search,
-          mode: "insensitive",
-        },
+      where.description = {
+        contains: search,
+        mode: "insensitive",
       };
     }
 
     if (startDate || endDate) {
-      where.productionDate = {};
+      where.saleDate = {};
       if (startDate) {
-        where.productionDate.gte = startDate;
+        where.saleDate.gte = startDate;
       }
       if (endDate) {
-        where.productionDate.lte = endDate;
+        where.saleDate.lte = endDate;
       }
     }
 
     const [items, total] = await Promise.all([
-      prisma.productionEntry.findMany({
+      prisma.manufacturingSale.findMany({
         where,
         skip,
         take: pageSize,
-        orderBy: { productionDate: "desc" },
-        include: {
-          product: {
-            include: {
-              unit: true,
-            },
-          },
-        },
+        orderBy: { saleDate: "desc" },
       }),
-      prisma.productionEntry.count({ where }),
+      prisma.manufacturingSale.count({ where }),
     ]);
 
     return {
-      items: items.map((x) => ({
+      items: items.map((x: any) => ({
         ...x,
-        boxesProduced: Number(x.boxesProduced),
-        totalPieces: Number(x.totalPieces),
-        estimatedRate: Number((x as any).estimatedRate || 0.0),
-        product: x.product ? {
-          ...x.product,
-          currentStock: Number(x.product.currentStock),
-          averageCost: Number(x.product.averageCost),
-          purchasePrice: x.product.purchasePrice ? Number(x.product.purchasePrice) : null,
-          sellingPrice: x.product.sellingPrice ? Number(x.product.sellingPrice) : null,
-          minStockAlert: x.product.minStockAlert ? Number(x.product.minStockAlert) : null,
-          gstRate: x.product.gstRate ? Number(x.product.gstRate) : null,
-        } : null,
+        amount: Number(x.amount),
       })),
       total,
       page,

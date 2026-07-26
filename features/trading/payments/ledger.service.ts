@@ -100,6 +100,74 @@ export const LedgerService = {
   },
 
   /**
+   * Returns a complete summary for a supplier: Total Purchases, Total Paid, and Outstanding Balance.
+   */
+  async getSupplierSummary(
+    contactId: string,
+    prisma: Prisma.TransactionClient | PrismaClient
+  ): Promise<{ totalPurchases: number; totalPaid: number; outstandingBalance: number }> {
+    const contact = await prisma.contact.findUnique({
+      where: { id: contactId },
+      select: { openingBalance: true, type: true },
+    });
+
+    if (!contact || contact.type !== "SUPPLIER") {
+      return { totalPurchases: 0, totalPaid: 0, outstandingBalance: 0 };
+    }
+
+    const purchasesSum = await prisma.purchase.aggregate({
+      where: { supplierId: contactId, status: "COMPLETED" },
+      _sum: { grandTotal: true },
+    });
+
+    const paymentsSum = await prisma.payment.aggregate({
+      where: { contactId, paymentType: "SUPPLIER_PAYMENT", status: "COMPLETED" },
+      _sum: { amount: true },
+    });
+
+    const openingBalance = Number(contact.openingBalance || 0);
+    const totalPurchases = Number(purchasesSum._sum.grandTotal || 0);
+    const totalPaid = Number(paymentsSum._sum.amount || 0);
+    const outstandingBalance = openingBalance + totalPurchases - totalPaid;
+
+    return { totalPurchases, totalPaid, outstandingBalance };
+  },
+
+  /**
+   * Returns a complete summary for a customer: Total Sales, Total Received, and Outstanding Balance.
+   */
+  async getCustomerSummary(
+    contactId: string,
+    prisma: Prisma.TransactionClient | PrismaClient
+  ): Promise<{ totalSales: number; totalReceived: number; outstandingBalance: number }> {
+    const contact = await prisma.contact.findUnique({
+      where: { id: contactId },
+      select: { openingBalance: true, type: true },
+    });
+
+    if (!contact || contact.type !== "CUSTOMER") {
+      return { totalSales: 0, totalReceived: 0, outstandingBalance: 0 };
+    }
+
+    const salesSum = await prisma.sale.aggregate({
+      where: { customerId: contactId, status: "COMPLETED" },
+      _sum: { grandTotal: true },
+    });
+
+    const receiptsSum = await prisma.payment.aggregate({
+      where: { contactId, paymentType: "CUSTOMER_RECEIPT", status: "COMPLETED" },
+      _sum: { amount: true },
+    });
+
+    const openingBalance = Number(contact.openingBalance || 0);
+    const totalSales = Number(salesSum._sum.grandTotal || 0);
+    const totalReceived = Number(receiptsSum._sum.amount || 0);
+    const outstandingBalance = openingBalance + totalSales - totalReceived;
+
+    return { totalSales, totalReceived, outstandingBalance };
+  },
+
+  /**
    * Calculates the remaining due balance on a specific purchase.
    * Outstanding = Purchase.grandTotal - Completed Payments
    */

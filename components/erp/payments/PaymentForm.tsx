@@ -6,19 +6,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createPaymentSchema,
   createReceiptSchema,
-  CreatePaymentFormValues,
 } from "@/features/trading/payments/validations";
 import {
   createSupplierPaymentAction,
   createCustomerReceiptAction,
-  getPendingSupplierPurchases,
-  getPendingCustomerSales,
+  getContactSummaryAction,
 } from "@/features/trading/payments/actions";
-import { TextField, Label, Input, Button } from "@heroui/react";
+import { Button } from "@heroui/react";
 import ContactSelector from "@/components/ui/ContactSelector";
-import DropdownSelector, {
-  DropdownOption,
-} from "@/components/ui/DropdownSelector";
 import { CurrencyInput } from "@/components/ui/form/CurrencyInput";
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
@@ -30,22 +25,18 @@ interface ContactOption {
   phone?: string | null;
 }
 
-interface PendingInvoice {
-  id: string;
-  purchaseNumber?: string;
-  saleNumber?: string;
-  purchaseDate?: Date | string;
-  saleDate?: Date | string;
-  grandTotal: number;
-  remainingBalance: number;
+interface ContactSummary {
+  totalAmount: number; // totalPurchases or totalSales
+  totalPaid: number; // totalPaid or totalReceived
+  outstandingBalance: number;
 }
 
 interface PaymentFormProps {
   contacts?: ContactOption[];
-  purchaseId?: string; // Preselected purchase
-  saleId?: string; // Preselected sale
   contactId?: string; // Preselected contact
-  prefilledBalance?: number; // Preselected remaining balance
+  purchaseId?: string; // Optional purchase link
+  saleId?: string; // Optional sale link
+  prefilledBalance?: number; // Optional prefilled balance
   onSuccess: (paymentId: string, paymentNumber: string) => void;
   onCancel: () => void;
   mode?: "SUPPLIER" | "CUSTOMER";
@@ -53,37 +44,25 @@ interface PaymentFormProps {
 
 export default function PaymentForm({
   contacts = [],
-  purchaseId = "",
-  saleId = "",
   contactId = "",
   prefilledBalance,
   onSuccess,
   onCancel,
   mode = "SUPPLIER",
 }: PaymentFormProps) {
-  const [pendingInvoices, setPendingInvoices] = useState<PendingInvoice[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string>(contactId);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>(
-    mode === "SUPPLIER" ? purchaseId : saleId,
-  );
-  const [selectedInvoice, setSelectedInvoice] = useState<PendingInvoice | null>(
-    null,
-  );
-
-  const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [summary, setSummary] = useState<ContactSummary | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const isPrefilledMode = mode === "SUPPLIER" ? !!purchaseId : !!saleId;
   const isSupplier = mode === "SUPPLIER";
 
   // React Hook Form
   const {
-    register,
     handleSubmit,
     setValue,
     control,
-    watch,
-    reset,
+    register,
     formState: { errors },
   } = useForm<any>({
     resolver: zodResolver(
@@ -91,9 +70,7 @@ export default function PaymentForm({
     ),
     defaultValues: {
       contactId: contactId,
-      purchaseId: isSupplier ? purchaseId : undefined,
-      saleId: !isSupplier ? saleId : undefined,
-      amount: prefilledBalance || 0,
+      amount: "",
       paymentDate: dayjs(new Date()).format("YYYY-MM-DD"),
       paymentMethod: "CASH",
       referenceNumber: "",
@@ -101,94 +78,45 @@ export default function PaymentForm({
     },
   });
 
-  // Fetch pending invoices when selectedContactId changes (only in generic selection mode)
+  // Fetch summary when selectedContactId changes
   useEffect(() => {
-    if (isPrefilledMode || !selectedContactId) {
-      setPendingInvoices([]);
+    if (!selectedContactId) {
+      setSummary(null);
       return;
     }
 
-    async function loadPendingBills() {
+    async function loadSummary() {
       try {
-        setLoadingInvoices(true);
-        const res = isSupplier
-          ? await getPendingSupplierPurchases(selectedContactId)
-          : await getPendingCustomerSales(selectedContactId);
-
+        setLoadingSummary(true);
+        const res = await getContactSummaryAction(selectedContactId, mode);
         if (res.success && res.data) {
-          setPendingInvoices(res.data);
+          const data = res.data as any;
+          const totalAmount = isSupplier ? data.totalPurchases : data.totalSales;
+          const totalPaid = isSupplier ? data.totalPaid : data.totalReceived;
+          const outstandingBalance = data.outstandingBalance;
 
-          // Clear invoice if not in list
-          if (!res.data.find((p: any) => p.id === selectedInvoiceId)) {
-            setSelectedInvoiceId("");
-            setValue(isSupplier ? "purchaseId" : "saleId", "");
-            setSelectedInvoice(null);
-            setValue("amount", 0);
-          }
+          setSummary({ totalAmount, totalPaid, outstandingBalance });
         } else {
-          toast.error(
-            res.error ||
-              `Failed to load ${isSupplier ? "supplier bills" : "customer sales"}`,
-          );
+          toast.error(res.error || "Failed to load account balance");
         }
       } catch (err) {
         console.error(err);
-        toast.error("An error occurred loading pending invoices");
+        toast.error("An error occurred loading contact summary");
       } finally {
-        setLoadingInvoices(false);
+        setLoadingSummary(false);
       }
     }
 
-    loadPendingBills();
-  }, [
-    selectedContactId,
-    isPrefilledMode,
-    selectedInvoiceId,
-    setValue,
-    isSupplier,
-  ]);
+    loadSummary();
+  }, [selectedContactId, mode, isSupplier]);
 
-  // Synchronize dynamic invoice details
-  useEffect(() => {
-    if (isPrefilledMode) return;
-
-    const invoice = pendingInvoices.find((p) => p.id === selectedInvoiceId);
-    if (invoice) {
-      setSelectedInvoice(invoice);
-      setValue("amount", invoice.remainingBalance);
-    } else {
-      setSelectedInvoice(null);
-      setValue("amount", 0);
-    }
-  }, [selectedInvoiceId, pendingInvoices, isPrefilledMode, setValue]);
-
-  // Save selected values back to Form
   const handleContactChange = (id: string) => {
     setSelectedContactId(id);
     setValue("contactId", id, { shouldValidate: true });
   };
 
-  const handleInvoiceChange = (id: string) => {
-    setSelectedInvoiceId(id);
-    setValue(isSupplier ? "purchaseId" : "saleId", id, {
-      shouldValidate: true,
-    });
-  };
-
   const onSubmit = (values: any) => {
-    // Client-side safety balance check
-    const currentBalance = isPrefilledMode
-      ? (prefilledBalance ?? 0)
-      : (selectedInvoice?.remainingBalance ?? 0);
-
-    if (values.amount > currentBalance + 0.01) {
-      toast.error(
-        `Transaction amount (₹${values.amount.toFixed(2)}) exceeds the remaining balance (₹${currentBalance.toFixed(2)}).`,
-      );
-      return;
-    }
-
-    // Combine selected date with current local time to capture correct transaction time
+    // Combine selected date with current local time
     const now = dayjs();
     let finalDate = dayjs(values.paymentDate);
     if (finalDate.isValid()) {
@@ -222,18 +150,6 @@ export default function PaymentForm({
     });
   };
 
-  // Convert pending invoices to dropdown options
-  const invoiceOptions: DropdownOption[] = pendingInvoices.map((p) => {
-    const rawDate = isSupplier ? p.purchaseDate : p.saleDate;
-    const dateStr = dayjs(rawDate).format("DD MMM YYYY");
-    const num = isSupplier ? p.purchaseNumber : p.saleNumber;
-    return {
-      id: p.id,
-      name: `${num} (Grand Total: ₹${p.grandTotal})`,
-      subtext: `Date: ${dateStr} • Balance: ₹${p.remainingBalance}`,
-    };
-  });
-
   const paymentMethodOptions = [
     { key: "CASH", label: "Cash" },
     { key: "BANK_TRANSFER", label: "Bank Transfer" },
@@ -247,7 +163,7 @@ export default function PaymentForm({
       className="flex flex-col gap-4 text-left"
     >
       {/* 1. Contact Selector */}
-      {isPrefilledMode ? (
+      {contactId ? (
         <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-850">
           <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
             {isSupplier ? "Supplier" : "Customer"}
@@ -279,95 +195,53 @@ export default function PaymentForm({
         </div>
       )}
 
-      {/* 2. Ref Invoice Selector */}
-      {isPrefilledMode ? (
-        <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-850">
-          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-            {isSupplier ? "Ref Purchase Invoice" : "Ref Sales Invoice"}
-          </span>
-          <span className="text-sm font-bold text-slate-900 dark:text-slate-50 mt-0.5 block">
-            Invoice Balance Due: ₹
-            {(prefilledBalance ?? 0).toLocaleString("en-IN", {
-              minimumFractionDigits: 2,
-            })}
-          </span>
+      {/* 2. Account Summary Cards */}
+      {loadingSummary ? (
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-850 animate-pulse flex flex-col gap-2">
+          <div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded" />
+          <div className="h-6 w-24 bg-slate-200 dark:bg-slate-800 rounded" />
         </div>
-      ) : (
-        <div>
-          <DropdownSelector
-            options={invoiceOptions}
-            selectedId={selectedInvoiceId}
-            onChange={handleInvoiceChange}
-            label={
-              isSupplier
-                ? "Select Pending Purchase Invoice"
-                : "Select Pending Sales Invoice"
-            }
-            placeholder={
-              !selectedContactId
-                ? `Select a ${isSupplier ? "supplier" : "customer"} first`
-                : loadingInvoices
-                  ? "Loading pending invoices..."
-                  : pendingInvoices.length === 0
-                    ? `No pending invoices found for this ${isSupplier ? "supplier" : "customer"}`
-                    : `Choose ${isSupplier ? "purchase bill" : "sale invoice"} to settle`
-            }
-            isInvalid={isSupplier ? !!errors.purchaseId : !!errors.saleId}
-            errorMessage={
-              isSupplier
-                ? errors.purchaseId?.message
-                  ? String(errors.purchaseId.message)
-                  : undefined
-                : errors.saleId?.message
-                  ? String(errors.saleId.message)
-                  : undefined
-            }
-            className={
-              !selectedContactId ? "opacity-60 pointer-events-none" : ""
-            }
-          />
+      ) : summary ? (
+        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-150 dark:border-slate-800 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+              {isSupplier ? "Total Purchases" : "Total Sales"}
+            </span>
+            <span className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-1 block">
+              ₹{summary.totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+              {isSupplier ? "Total Paid" : "Total Received"}
+            </span>
+            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1 block">
+              ₹{summary.totalPaid.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+              Outstanding
+            </span>
+            <span className={`text-sm font-bold mt-1 block ${summary.outstandingBalance > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-slate-300"}`}>
+              ₹{summary.outstandingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            </span>
+          </div>
         </div>
-      )}
-      {/* Selected Invoice Balance */}
-      {selectedInvoice && (
-        <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-850">
-          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-            Invoice Balance Due
-          </span>
-          <span className="text-sm font-bold text-slate-900 dark:text-slate-50 mt-0.5 block">
-            ₹
-            {selectedInvoice.remainingBalance.toLocaleString("en-IN", {
-              minimumFractionDigits: 2,
-            })}
-          </span>
-        </div>
-      )}
+      ) : null}
 
       {/* 3. Amount Field */}
       <Controller
         name="amount"
         control={control}
         render={({ field }) => (
-          // <CurrencyInput
-          //   label={isSupplier ? "Payment Amount" : "Receipt Amount"}
-          //   value={field.value}
-          //   onChange={(val) => {
-          //     // Allow clearing the input without immediately resetting to 0
-          //     if (val === '' || val === undefined) {
-          //       field.onChange('');
-          //       return;
-          //     }
-          //     const num = Number(val);
-          //     field.onChange(isNaN(num) ? 0 : num);
-          //   }}
-          //   error={errors.amount}
-          // />
           <CurrencyInput
             label={isSupplier ? "Payment Amount" : "Receipt Amount"}
             value={field.value ?? ""}
             onChange={(e) => {
               const value = e.target.value;
-
               field.onChange(value === "" ? "" : Number(value));
             }}
             onBlur={field.onBlur}
@@ -414,14 +288,11 @@ export default function PaymentForm({
       </div>
 
       {/* Reference Number */}
-      <TextField
-        isInvalid={!!errors.referenceNumber}
-        className="flex flex-col gap-1 w-full"
-      >
-        <Label className="text-sm font-semibold text-slate-700 dark:text-slate-350">
+      <div className="flex flex-col gap-1 w-full">
+        <label className="text-sm font-semibold text-slate-700 dark:text-slate-350">
           Reference Number (UPI / Txn / Cheque)
-        </Label>
-        <Input
+        </label>
+        <input
           type="text"
           placeholder="Enter reference number (optional)"
           className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 dark:focus:border-slate-100 outline-none text-sm"
@@ -432,17 +303,14 @@ export default function PaymentForm({
             {String(errors.referenceNumber.message)}
           </span>
         )}
-      </TextField>
+      </div>
 
       {/* Notes */}
-      <TextField
-        isInvalid={!!errors.notes}
-        className="flex flex-col gap-1 w-full"
-      >
-        <Label className="text-sm font-semibold text-slate-700 dark:text-slate-350">
+      <div className="flex flex-col gap-1 w-full">
+        <label className="text-sm font-semibold text-slate-700 dark:text-slate-350">
           Internal Notes
-        </Label>
-        <Input
+        </label>
+        <input
           type="text"
           placeholder="Enter private notes (optional)"
           className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-slate-900 bg-white dark:border-slate-850 dark:bg-slate-950 dark:focus:border-slate-100 outline-none text-sm"
@@ -453,32 +321,14 @@ export default function PaymentForm({
             {String(errors.notes.message)}
           </span>
         )}
-      </TextField>
+      </div>
 
       {/* Footer Buttons */}
       <div className="flex gap-3 justify-end mt-4">
         <Button
           type="button"
           variant="tertiary"
-          onPress={() => {
-            // Reset form to initial defaults
-            reset({
-              contactId: contactId,
-              purchaseId: isSupplier ? purchaseId : undefined,
-              saleId: !isSupplier ? saleId : undefined,
-              amount: prefilledBalance || 0,
-              paymentDate: dayjs(new Date()).format("YYYY-MM-DD"),
-              paymentMethod: "CASH",
-              referenceNumber: "",
-              notes: "",
-            });
-            // Reset selections
-            setSelectedContactId(contactId);
-            setSelectedInvoiceId(isSupplier ? purchaseId : saleId);
-            setSelectedInvoice(null);
-            // Call external cancel handler
-            onCancel();
-          }}
+          onPress={onCancel}
           className="font-bold border border-slate-150 rounded-xl"
         >
           Cancel

@@ -50,18 +50,26 @@ export default function LoginPage() {
         loginParams = { email, password: data.password };
       }
 
-      const { error } = await supabase.auth.signInWithPassword(loginParams);
+      const { data: authResult, error } = await supabase.auth.signInWithPassword(loginParams);
 
       if (error) {
-        toast.error("Invalid email, mobile number, or password");
-      } else {
+        if (error.message?.includes("Failed to fetch") || error.message?.includes("fetch")) {
+          toast.error("Network error: Unable to connect to Supabase Auth server. Please check your Supabase URL or network connection.");
+        } else {
+          toast.error(error.message || "Invalid email, mobile number, or password");
+        }
+      } else if (authResult?.user) {
         toast.success("Welcome back! Redirecting...");
         router.push("/workspace");
         router.refresh();
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("An unexpected error occurred during login.");
+    } catch (err: any) {
+      console.error("Login exception:", err);
+      if (err?.message?.includes("Failed to fetch") || err?.name === "TypeError") {
+        toast.error("Network error: Unable to connect to Supabase Auth server. Please check your Supabase URL or network connection.");
+      } else {
+        toast.error("An unexpected error occurred during login.");
+      }
     } finally {
       setLoading(false);
     }

@@ -126,7 +126,7 @@ function ExpensesPageContent() {
     defaultValues: {
       categoryId: "",
       description: "",
-      amount: 0,
+      amount: "",
       notes: "",
       expenseDate: dayjs().format("YYYY-MM-DD"),
     },

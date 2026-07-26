@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
 import { ManufacturingService } from "./manufacturing.service";
 import { z } from "zod";
 
@@ -18,17 +17,14 @@ const editExpenseSchema = expenseSchema.extend({
   id: z.string().uuid("Invalid expense ID"),
 });
 
-const productionSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  boxesProduced: z.number().positive("Boxes produced must be greater than zero"),
-  piecesPerBox: z.number().int().positive("Pieces per box must be a positive integer"),
-  estimatedRate: z.number().nonnegative("Estimated rate must be positive or zero").default(0.0),
-  notes: z.string().nullable().optional(),
-  productionDate: z.preprocess((val) => new Date(val as string), z.date()),
+const manufacturingSaleSchema = z.object({
+  amount: z.number().positive("Sales amount must be greater than zero"),
+  description: z.string().nullable().optional(),
+  saleDate: z.preprocess((val) => new Date(val as string), z.date()),
 });
 
-const editProductionSchema = productionSchema.extend({
-  id: z.string().uuid("Invalid production ID"),
+const editManufacturingSaleSchema = manufacturingSaleSchema.extend({
+  id: z.string().uuid("Invalid sale ID"),
 });
 
 // =========================================================================
@@ -105,75 +101,55 @@ export async function getExpensesAction(params: {
 }
 
 // =========================================================================
-// Production Entry Actions
+// Manufacturing Sales Revenue Actions
 // =========================================================================
 
-export async function createProductionEntryAction(rawData: any) {
+export async function createManufacturingSaleAction(rawData: any) {
   try {
-    const validated = productionSchema.parse(rawData);
-    const entry = await ManufacturingService.createProductionEntry(validated);
+    const validated = manufacturingSaleSchema.parse(rawData);
+    const sale = await ManufacturingService.createManufacturingSale(validated);
 
-    revalidatePath("/manufacturing/production");
-    revalidatePath("/manufacturing/stock");
+    revalidatePath("/manufacturing/sales");
+    revalidatePath("/manufacturing/reports");
     revalidatePath("/manufacturing"); // dashboard
-    revalidatePath("/trading/stock"); // shared centralized stock
-    return {
-      success: true,
-      data: {
-        ...entry,
-        boxesProduced: Number(entry.boxesProduced),
-        totalPieces: Number(entry.totalPieces),
-        estimatedRate: Number((entry as any).estimatedRate || 0.0),
-      },
-    };
+    return { success: true, data: sale };
   } catch (error: any) {
-    console.error("createProductionEntryAction failed:", error);
-    return { success: false, error: error.errors?.[0]?.message || error.message || "Failed to log production" };
+    console.error("createManufacturingSaleAction failed:", error);
+    return { success: false, error: error.errors?.[0]?.message || error.message || "Failed to log manufacturing sale" };
   }
 }
 
-export async function updateProductionEntryAction(rawData: any) {
+export async function updateManufacturingSaleAction(rawData: any) {
   try {
-    const validated = editProductionSchema.parse(rawData);
-    const entry = await ManufacturingService.updateProductionEntry(validated);
+    const validated = editManufacturingSaleSchema.parse(rawData);
+    const sale = await ManufacturingService.updateManufacturingSale(validated);
 
-    revalidatePath("/manufacturing/production");
-    revalidatePath("/manufacturing/stock");
+    revalidatePath("/manufacturing/sales");
+    revalidatePath("/manufacturing/reports");
     revalidatePath("/manufacturing"); // dashboard
-    revalidatePath("/trading/stock"); // shared centralized stock
-    return {
-      success: true,
-      data: {
-        ...entry,
-        boxesProduced: Number(entry.boxesProduced),
-        totalPieces: Number(entry.totalPieces),
-        estimatedRate: Number((entry as any).estimatedRate || 0.0),
-      },
-    };
+    return { success: true, data: sale };
   } catch (error: any) {
-    console.error("updateProductionEntryAction failed:", error);
-    return { success: false, error: error.errors?.[0]?.message || error.message || "Failed to update production" };
+    console.error("updateManufacturingSaleAction failed:", error);
+    return { success: false, error: error.errors?.[0]?.message || error.message || "Failed to update manufacturing sale" };
   }
 }
 
-export async function deleteProductionEntryAction(id: string) {
+export async function deleteManufacturingSaleAction(id: string) {
   try {
-    await ManufacturingService.deleteProductionEntry(id);
+    await ManufacturingService.deleteManufacturingSale(id);
 
-    revalidatePath("/manufacturing/production");
-    revalidatePath("/manufacturing/stock");
+    revalidatePath("/manufacturing/sales");
+    revalidatePath("/manufacturing/reports");
     revalidatePath("/manufacturing"); // dashboard
-    revalidatePath("/trading/stock"); // shared centralized stock
     return { success: true };
   } catch (error: any) {
-    console.error("deleteProductionEntryAction failed:", error);
-    return { success: false, error: error.message || "Failed to delete production" };
+    console.error("deleteManufacturingSaleAction failed:", error);
+    return { success: false, error: error.message || "Failed to delete manufacturing sale" };
   }
 }
 
-export async function getProductionEntriesAction(params: {
+export async function getManufacturingSalesAction(params: {
   search?: string;
-  productId?: string;
   startDate?: string;
   endDate?: string;
   page?: number;
@@ -183,9 +159,8 @@ export async function getProductionEntriesAction(params: {
     const start = params.startDate ? new Date(params.startDate) : undefined;
     const end = params.endDate ? new Date(params.endDate) : undefined;
 
-    const res = await ManufacturingService.getProductionEntries({
+    const res = await ManufacturingService.getManufacturingSales({
       search: params.search,
-      productId: params.productId,
       startDate: start,
       endDate: end,
       page: params.page,
@@ -194,35 +169,7 @@ export async function getProductionEntriesAction(params: {
 
     return { success: true, data: res };
   } catch (error: any) {
-    console.error("getProductionEntriesAction failed:", error);
-    return { success: false, error: error.message || "Failed to load production entries" };
-  }
-}
-
-export async function getProductionProductsAction() {
-  try {
-    const items = await prisma.product.findMany({
-      where: {
-        isActive: true,
-        type: { in: ["FINISHED_GOOD", "TRADING_PRODUCT"] }
-      },
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        piecesPerBox: true
-      },
-      orderBy: { name: "asc" }
-    });
-    return {
-      success: true,
-      data: items.map((x: any) => ({
-        ...x,
-        piecesPerBox: x.piecesPerBox || 1000
-      }))
-    };
-  } catch (error: any) {
-    console.error("getProductionProductsAction failed:", error);
-    return { success: false, error: error.message || "Failed to load production products" };
+    console.error("getManufacturingSalesAction failed:", error);
+    return { success: false, error: error.message || "Failed to load manufacturing sales" };
   }
 }

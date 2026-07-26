@@ -3,13 +3,12 @@
 import { useEffect, useState, useTransition } from "react";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
-import { Tabs, Tab } from "@heroui/react";
 import { StatsSkeleton } from "@/components/ui/Skeleton";
 import { getManufacturingReportsAction } from "@/features/shared/dashboard/actions";
 import {
   TrendingDown,
-  Factory,
-  Package
+  TrendingUp,
+  DollarSign
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -51,43 +50,36 @@ export default function ReportsPageContent() {
   const kpis = reportData ? [
     {
       title: "Total Expenses",
-      value: `₹${reportData.summary.totalExpenses.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+      value: `₹${(reportData.summary.totalExpenses || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
       subtitle: "Manufacturing direct costs",
       icon: TrendingDown,
-      textColor: "text-red-655 dark:text-red-400"
+      textColor: "text-red-600 dark:text-red-400"
     },
     {
-      title: "Estimated Yield Value",
-      value: `₹${(reportData.summary.totalProductionValue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-      subtitle: "Estimated yield market value",
-      icon: Package,
-      textColor: "text-blue-600 dark:text-blue-400"
+      title: "Total Manufacturing Sales",
+      value: `₹${(reportData.summary.totalSales || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+      subtitle: "Recorded sales entries",
+      icon: TrendingUp,
+      textColor: "text-emerald-600 dark:text-emerald-400"
     },
     {
       title: "Manufacturing Net Profit",
       value: `₹${(reportData.summary.netProfit || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-      subtitle: "Yield value - direct expenses",
-      icon: Factory,
-      textColor: (reportData.summary.netProfit || 0) >= 0 ? "text-emerald-650 dark:text-emerald-400" : "text-red-650 dark:text-red-450"
-    },
-    {
-      title: "Boxes Produced",
-      value: `${reportData.summary.totalBoxesProduced.toLocaleString()} Boxes`,
-      subtitle: "Log volume yield",
-      icon: Factory,
-      textColor: "text-slate-700 dark:text-slate-300"
+      subtitle: "Total Sales - Total Expenses",
+      icon: DollarSign,
+      textColor: (reportData.summary.netProfit || 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600"
     }
   ] : [];
 
   return (
     <div className="flex flex-col gap-6">
       <Header
-        title="Manufacturing Reports"
-        subtitle="Analyze production quantities, direct expense summaries, and efficiency"
+        title="Manufacturing Profit Analysis & Reports"
+        subtitle="Analyze manufacturing sales revenue, direct expenses, and net profit"
       />
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex flex-wrap gap-2 p-1 bg-slate-100 dark:bg-slate-955 rounded-xl border border-slate-205 dark:border-slate-800">
+        <div className="flex flex-wrap gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
           {[
             { key: "daily", label: "Daily View (30 Days)" },
             { key: "weekly", label: "Weekly View (12 Weeks)" },
@@ -100,8 +92,8 @@ export default function ReportsPageContent() {
               onClick={() => setActiveTab(t.key as any)}
               className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 ${
                 activeTab === t.key
-                  ? "bg-slate-900 text-white dark:bg-slate-55 dark:text-slate-955 shadow-sm font-black"
-                  : "text-slate-655 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-205"
+                  ? "bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900 shadow-sm font-black"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
               {t.label}
@@ -115,7 +107,7 @@ export default function ReportsPageContent() {
       ) : (
         <div className="flex flex-col gap-6">
           {/* KPI summaries */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {kpis.map((kpi) => {
               const Icon = kpi.icon;
               return (
@@ -124,7 +116,7 @@ export default function ReportsPageContent() {
                     <span className={`text-xl sm:text-2xl font-extrabold tracking-tight ${kpi.textColor}`}>
                       {kpi.value}
                     </span>
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl text-slate-505">
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl text-slate-500">
                       <Icon className="w-5.5 h-5.5" />
                     </div>
                   </div>
@@ -135,8 +127,8 @@ export default function ReportsPageContent() {
 
           {/* Charts Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Primary Production & Expense Trend Chart */}
-            <Card title="Expenses & Production Volume Trend" className="lg:col-span-2" subtitle="Comparative overview of yields and direct cash outflows">
+            {/* Sales vs Expenses & Profit Trend Chart */}
+            <Card title="Sales vs Expenses & Profit Trend" className="lg:col-span-2" subtitle="Overview of revenue, cash outflows, and net profit">
               <div className="h-80 w-full mt-4 text-xs font-semibold">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -145,14 +137,12 @@ export default function ReportsPageContent() {
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis dataKey="label" stroke="#94a3b8" />
-                    <YAxis yAxisId="left" orientation="left" stroke="#64748b" label={{ value: "Amount (₹)", angle: -90, position: "insideLeft", style: { textAnchor: "middle", fill: "#94a3b8" } }} />
-                    <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" label={{ value: "Boxes Produced", angle: 90, position: "insideRight", style: { textAnchor: "middle", fill: "#94a3b8" } }} />
-                    <Tooltip contentStyle={{ borderRadius: "16px", fontWeight: "bold" }} formatter={(value, name) => name === "Production (Boxes)" ? `${value} Boxes` : `₹${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`} />
+                    <YAxis stroke="#64748b" label={{ value: "Amount (₹)", angle: -90, position: "insideLeft", style: { textAnchor: "middle", fill: "#94a3b8" } }} />
+                    <Tooltip contentStyle={{ borderRadius: "16px", fontWeight: "bold" }} formatter={(value) => `₹${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`} />
                     <Legend />
-                    <Bar yAxisId="left" dataKey="expenses" name="Direct Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                    <Bar yAxisId="left" dataKey="estimatedValue" name="Yield Value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                    <Bar yAxisId="left" dataKey="profit" name="Net Profit" fill="#10b981" radius={[4, 4, 0, 0]} />
-                    <Bar yAxisId="right" dataKey="boxes" name="Production (Boxes)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="sales" name="Manufacturing Sales" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expenses" name="Direct Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="netProfit" name="Net Profit" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -196,7 +186,7 @@ export default function ReportsPageContent() {
                   </>
                 ) : (
                   <div className="text-center text-slate-400 font-semibold py-20">
-                    No expense records available to breakdown.
+                    No expense records available.
                   </div>
                 )}
               </div>
