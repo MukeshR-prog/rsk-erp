@@ -93,6 +93,7 @@ export default function PurchasesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [paymentFilter, setPaymentFilter] = useState<string>("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
 
   // Date Preset Filter State
@@ -180,6 +181,7 @@ export default function PurchasesPage() {
           status: statusFilter ? (statusFilter as PurchaseStatus) : undefined,
           paymentStatus: paymentFilter ? (paymentFilter as PurchasePaymentStatus) : undefined,
           page,
+          limit: pageSize,
           startDate: startDate || undefined,
           endDate: endDate || undefined,
         }),
@@ -217,7 +219,7 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     loadData();
-  }, [search, statusFilter, paymentFilter, page, startDate, endDate]);
+  }, [search, statusFilter, paymentFilter, page, pageSize, startDate, endDate]);
 
   // Form Calculations
   const calculateTotals = () => {
@@ -797,26 +799,47 @@ export default function PurchasesPage() {
 
           {/* Simple Pagination Footer */}
           {!loading && purchases.length > 0 && (
-            <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-900 pt-4 mt-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                isDisabled={page === 1}
-                onPress={() => setPage((prev) => Math.max(1, prev - 1))}
-              >
-                Previous
-              </Button>
-              <span className="text-xs font-bold text-slate-500">
-                Page {page} of {totalPages}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                isDisabled={page === totalPages}
-                onPress={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              >
-                Next
-              </Button>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-t border-slate-100 dark:border-slate-900 pt-4 mt-2">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                <span>Per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    isDisabled={page === 1}
+                    onPress={() => setPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs font-bold text-slate-500">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    isDisabled={page === totalPages}
+                    onPress={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>

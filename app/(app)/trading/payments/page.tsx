@@ -69,6 +69,7 @@ function PaymentsPageContent() {
 
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
 
   const [search, setSearch] = useState("");
@@ -146,7 +147,7 @@ function PaymentsPageContent() {
       const [paymentsRes, metricsRes] = await Promise.all([
         getSupplierPayments({
           page,
-          limit: 10,
+          limit: pageSize,
           search: search || undefined,
           contactId: selectedContactId || undefined,
           paymentMethod: (selectedMethod as any) || undefined,
@@ -179,7 +180,7 @@ function PaymentsPageContent() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [page, search, selectedContactId, selectedMethod, startDate, endDate, statusTab, mode]);
+  }, [page, pageSize, search, selectedContactId, selectedMethod, startDate, endDate, statusTab, mode]);
 
   const handleCancelPaymentSubmit = () => {
     if (!cancellingPayment) return;
@@ -478,33 +479,54 @@ function PaymentsPageContent() {
 
               {/* Pagination controls */}
               {total > 0 && (
-                <div className="flex justify-between items-center mt-4 border-t border-slate-50 dark:border-slate-900 pt-4">
-                  <span className="text-xs text-slate-450 dark:text-slate-500 font-medium">
-                    Showing {(page - 1) * 10 + 1} - {Math.min(page * 10, total)} of {total} items
-                  </span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="tertiary"
-                      size="sm"
-                      isDisabled={page === 1}
-                      onPress={() => setPage((p) => Math.max(1, p - 1))}
-                      className="font-bold rounded-lg px-3 py-1 text-xs"
-                    >
-                      Prev
-                    </Button>
-                    <span className="text-xs font-bold px-3 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg flex items-center">
-                      Page {page} of {totalPages}
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4 border-t border-slate-50 dark:border-slate-900 pt-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-slate-450 dark:text-slate-500 font-medium">
+                      Showing {Math.min((page - 1) * pageSize + 1, total)} - {Math.min(page * pageSize, total)} of {total} items
                     </span>
-                    <Button
-                      variant="tertiary"
-                      size="sm"
-                      isDisabled={page === totalPages}
-                      onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      className="font-bold rounded-lg px-3 py-1 text-xs"
-                    >
-                      Next
-                    </Button>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <span>Per page:</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPageSize(Number(e.target.value));
+                          setPage(1);
+                        }}
+                        className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
                   </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        isDisabled={page === 1}
+                        onPress={() => setPage((p) => Math.max(1, p - 1))}
+                        className="font-bold rounded-lg px-3 py-1 text-xs"
+                      >
+                        Prev
+                      </Button>
+                      <span className="text-xs font-bold px-3 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg flex items-center">
+                        Page {page} of {totalPages}
+                      </span>
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        isDisabled={page === totalPages}
+                        onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        className="font-bold rounded-lg px-3 py-1 text-xs"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
