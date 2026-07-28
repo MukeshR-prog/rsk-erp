@@ -422,6 +422,10 @@ export async function updateContact(id: string, data: {
 
     revalidatePath("/master-data/contacts");
     revalidatePath(`/master-data/contacts/${id}`);
+    revalidatePath("/trading/suppliers");
+    revalidatePath(`/trading/suppliers/${id}`);
+    revalidatePath("/trading/customers");
+    revalidatePath(`/trading/customers/${id}`);
     
     const outstandingBalance = item.type === "SUPPLIER"
       ? await LedgerService.getSupplierOutstanding(item.id, prisma)
