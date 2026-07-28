@@ -21,7 +21,7 @@ import {
   Tab,
   Tabs,
 } from "@heroui/react";
-import { Search, Plus, Edit, Trash2, CheckCircle, User, Phone, MapPin, X } from "lucide-react";
+import { Search, Plus, Edit, Trash2, CheckCircle, User, Phone, MapPin, X, Eye } from "lucide-react";
 import toast from "react-hot-toast";
 import { getContacts, upsertContact, toggleContactStatus } from "@/features/master-data/contacts/actions";
 import { contactSchema, ContactFormValues } from "@/features/master-data/contacts/validations";
@@ -260,11 +260,12 @@ function ContactsPageContent() {
             <Button
               size="sm"
               variant="ghost"
-              onPress={(e) => handleOpenForm(item, e)}
-              aria-label="Edit contact"
-              className="min-w-0 p-1.5 text-slate-500 border-none shadow-none hover:bg-slate-100"
+              onPress={() => router.push(`/master-data/contacts/${item.id}`)}
+              aria-label="View contact details"
+              className="min-w-0 p-1.5 text-slate-500 border-none shadow-none hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold"
             >
-              <Edit className="w-4 h-4" />
+              <Eye className="w-4 h-4 mr-1 text-slate-500" />
+              <span>Details</span>
             </Button>
             <Button
               size="sm"
@@ -274,9 +275,9 @@ function ContactsPageContent() {
               className="min-w-0 p-1.5 border-none shadow-none hover:bg-slate-150"
             >
               {item.isActive ? (
-                <Trash2 className="w-4 h-4 text-red-655" />
+                <Trash2 className="w-4 h-4 text-red-650" />
               ) : (
-                <CheckCircle className="w-4 h-4 text-green-655" />
+                <CheckCircle className="w-4 h-4 text-green-650" />
               )}
             </Button>
           </div>
@@ -340,9 +341,9 @@ function ContactsPageContent() {
         </div>
 
         <div className="flex justify-end gap-2 border-t border-slate-50 dark:border-slate-905/30 pt-2">
-          <Button size="sm" variant="ghost" onPress={(e) => handleOpenForm(item, e)} className="border-none min-w-0 p-1 text-slate-600">
-            <Edit className="w-4 h-4 mr-1 text-slate-650" />
-            <span>Edit</span>
+          <Button size="sm" variant="ghost" onPress={() => router.push(`/master-data/contacts/${item.id}`)} className="border-none min-w-0 p-1 text-slate-600 font-bold">
+            <Eye className="w-4 h-4 mr-1 text-slate-500" />
+            <span>Open Profile</span>
           </Button>
           <Button
             size="sm"
