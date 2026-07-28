@@ -29,7 +29,7 @@ export async function getProducts(params: {
   page?: number;
   pageSize?: number;
   showInactive?: boolean;
-  type?: "RAW_MATERIAL" | "FINISHED_GOOD" | "TRADING_PRODUCT" | "ALL";
+  type?: "RAW_MATERIAL" | "FINISHED_GOOD" | "TRADING_PRODUCT" | "ALL" | "ALL_TRADING";
   categoryId?: string;
   unitId?: string;
 }) {
@@ -58,7 +58,9 @@ export async function getProducts(params: {
       where.isActive = true;
     }
 
-    if (type !== "ALL") {
+    if (type === "ALL_TRADING") {
+      where.type = { in: ["FINISHED_GOOD", "TRADING_PRODUCT"] };
+    } else if (type !== "ALL") {
       where.type = type;
     }
 

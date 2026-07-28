@@ -34,6 +34,7 @@ function CustomersPageContent() {
   const [customers, setCustomers] = useState<ContactData[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -46,7 +47,7 @@ function CustomersPageContent() {
       const res = await getContacts({
         search,
         page,
-        pageSize: 10,
+        pageSize,
         showInactive: false,
         type: "CUSTOMER",
       });
@@ -66,7 +67,7 @@ function CustomersPageContent() {
       loadCustomers();
     }, 300);
     return () => clearTimeout(timer);
-  }, [page, search]);
+  }, [page, pageSize, search]);
 
   const tableHeaders = [
     { key: "name", label: "Customer Name" },
@@ -204,26 +205,49 @@ function CustomersPageContent() {
         )}
 
         {total > 0 && (
-          <div className="flex justify-between items-center mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
-            <span className="text-xs text-slate-500 dark:text-slate-400">Total items: {total}</span>
-            <div className="flex gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                isDisabled={page === 1}
-                onPress={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                isDisabled={page === totalPages}
-                onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Next
-              </Button>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                Showing {Math.min((page - 1) * pageSize + 1, total)} - {Math.min(page * pageSize, total)} of {total} items
+              </span>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span>Per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
             </div>
+
+            {totalPages > 1 && (
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  isDisabled={page === 1}
+                  onPress={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  isDisabled={page === totalPages}
+                  onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>

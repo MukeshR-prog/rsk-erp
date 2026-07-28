@@ -49,6 +49,7 @@ export default function SalesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [paymentFilter, setPaymentFilter] = useState<string>("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
 
   // Modal State
@@ -74,6 +75,7 @@ export default function SalesPage() {
           status: statusFilter ? (statusFilter as SaleStatus) : undefined,
           paymentStatus: paymentFilter ? (paymentFilter as SalePaymentStatus) : undefined,
           page,
+          limit: pageSize,
         }),
         getTradingDashboardAction(),
         getCustomersAction(),
@@ -107,7 +109,7 @@ export default function SalesPage() {
 
   useEffect(() => {
     loadData();
-  }, [search, statusFilter, paymentFilter, page]);
+  }, [search, statusFilter, paymentFilter, page, pageSize]);
 
   // Handlers
   const handleOpenCreate = () => {
@@ -549,30 +551,49 @@ export default function SalesPage() {
 
           {/* Pagination */}
           {!loading && sales.length > 0 && (
-            <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
-              <span className="text-xs text-slate-500 font-bold">
-                Page {page} of {totalPages}
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="rounded-lg text-xs"
-                  isDisabled={page === 1}
-                  onPress={() => setPage((p) => Math.max(1, p - 1))}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                <span>Per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none"
                 >
-                  Previous
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="rounded-lg text-xs"
-                  isDisabled={page === totalPages}
-                  onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Next
-                </Button>
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
               </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="rounded-lg text-xs"
+                    isDisabled={page === 1}
+                    onPress={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs text-slate-500 font-bold">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="rounded-lg text-xs"
+                    isDisabled={page === totalPages}
+                    onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
