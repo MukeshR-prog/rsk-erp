@@ -1,10 +1,9 @@
 import React from "react";
 import Link from "next/link";
-import Table from "@/components/ui/Table";
 import PaymentStatusBadge from "./PaymentStatusBadge";
 import dayjs from "dayjs";
 import { Button } from "@heroui/react";
-import { Trash2, Eye } from "lucide-react";
+import { Trash2, Eye, User } from "lucide-react";
 
 interface PaymentItem {
   id: string;
@@ -16,6 +15,12 @@ interface PaymentItem {
   notes?: string | null;
   status: "COMPLETED" | "CANCELLED";
   cancellationReason?: string | null;
+  contact?: {
+    id?: string;
+    name?: string | null;
+    contactPerson?: string | null;
+    type?: string | null;
+  } | null;
 }
 
 interface PaymentHistoryTableProps {
@@ -46,9 +51,10 @@ export default function PaymentHistoryTable({
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="border-b border-slate-100 dark:border-slate-850 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+          <tr className="border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
             <th className="py-3 px-4">Transaction Date</th>
             <th className="py-3 px-4">Voucher No.</th>
+            <th className="py-3 px-4">Party / Contact Name</th>
             <th className="py-3 px-4">Method</th>
             <th className="py-3 px-4">Reference</th>
             <th className="py-3 px-4 text-right">Amount</th>
@@ -58,7 +64,6 @@ export default function PaymentHistoryTable({
         </thead>
         <tbody className="divide-y divide-slate-50 dark:divide-slate-900 text-sm font-medium text-slate-700 dark:text-slate-350">
           {payments.map((payment) => {
-            const dateObj = new Date(payment.paymentDate);
             const isCancelled = payment.status === "CANCELLED";
 
             return (
@@ -69,29 +74,44 @@ export default function PaymentHistoryTable({
                 }`}
               >
                 {/* Date */}
-                <td className="py-3 px-4">
+                <td className="py-3 px-4 whitespace-nowrap">
                   {dayjs(payment.paymentDate).isValid()
                     ? dayjs(payment.paymentDate).format("DD MMM YYYY hh:mm A")
                     : "Invalid Date"}
                 </td>
 
                 {/* Number */}
-                <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
+                <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
                   {payment.paymentNumber}
                 </td>
 
+                {/* Party Name & Contact */}
+                <td className="py-3 px-4">
+                  <div className="flex flex-col">
+                    <span className="font-bold text-slate-900 dark:text-slate-100">
+                      {payment.contact?.name || "—"}
+                    </span>
+                    {payment.contact?.contactPerson && (
+                      <span className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-1">
+                        <User className="w-3 h-3 text-slate-400" />
+                        <span>{payment.contact.contactPerson}</span>
+                      </span>
+                    )}
+                  </div>
+                </td>
+
                 {/* Method */}
-                <td className="py-3 px-4 text-xs font-bold uppercase">
+                <td className="py-3 px-4 text-xs font-bold uppercase whitespace-nowrap">
                   {formatMethod(payment.paymentMethod)}
                 </td>
 
                 {/* Reference */}
-                <td className="py-3 px-4 font-mono text-xs">
+                <td className="py-3 px-4 font-mono text-xs whitespace-nowrap">
                   {payment.referenceNumber || "-"}
                 </td>
 
                 {/* Amount */}
-                <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-slate-100">
+                <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
                   ₹{payment.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </td>
 

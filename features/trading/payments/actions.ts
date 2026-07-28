@@ -94,7 +94,10 @@ export async function getSupplierPayments(filters: PaymentFilters) {
         include: {
           contact: {
             select: {
+              id: true,
               name: true,
+              contactPerson: true,
+              type: true,
             },
           },
           purchase: {

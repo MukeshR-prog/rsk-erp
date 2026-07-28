@@ -477,7 +477,7 @@ function PaymentsPageContent() {
               />
 
               {/* Pagination controls */}
-              {totalPages > 1 && (
+              {total > 0 && (
                 <div className="flex justify-between items-center mt-4 border-t border-slate-50 dark:border-slate-900 pt-4">
                   <span className="text-xs text-slate-450 dark:text-slate-500 font-medium">
                     Showing {(page - 1) * 10 + 1} - {Math.min(page * 10, total)} of {total} items
