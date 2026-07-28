@@ -796,7 +796,7 @@ export default function PurchasesPage() {
           )}
 
           {/* Simple Pagination Footer */}
-          {!loading && totalPages > 1 && (
+          {!loading && purchases.length > 0 && (
             <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-900 pt-4 mt-2">
               <Button
                 variant="ghost"

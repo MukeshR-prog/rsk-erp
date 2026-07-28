@@ -548,7 +548,7 @@ export default function SalesPage() {
           )}
 
           {/* Pagination */}
-          {!loading && totalPages > 1 && (
+          {!loading && sales.length > 0 && (
             <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
               <span className="text-xs text-slate-500 font-bold">
                 Page {page} of {totalPages}

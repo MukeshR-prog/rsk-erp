@@ -492,7 +492,7 @@ function ExpensesPageContent() {
           />
         )}
 
-        {totalPages > 1 && (
+        {total > 0 && (
           <div className="flex justify-between items-center mt-4">
             <span className="text-xs text-slate-500 dark:text-slate-400">Total items: {total}</span>
             <div className="flex gap-1">

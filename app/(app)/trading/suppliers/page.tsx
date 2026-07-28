@@ -203,7 +203,7 @@ function SuppliersPageContent() {
           />
         )}
 
-        {totalPages > 1 && (
+        {total > 0 && (
           <div className="flex justify-between items-center mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
             <span className="text-xs text-slate-500 dark:text-slate-400">Total items: {total}</span>
             <div className="flex gap-1">
