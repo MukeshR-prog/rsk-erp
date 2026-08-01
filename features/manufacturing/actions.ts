@@ -7,7 +7,7 @@ import { z } from "zod";
 // Zod schemas for input validation
 const expenseSchema = z.object({
   categoryId: z.string().min(1, "Expense category is required"),
-  description: z.string().min(1, "Description is required"),
+  description: z.string().nullable().optional(),
   amount: z.number().positive("Amount must be greater than zero"),
   notes: z.string().nullable().optional(),
   expenseDate: z.preprocess((val) => new Date(val as string), z.date()),

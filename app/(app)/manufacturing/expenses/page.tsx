@@ -35,7 +35,7 @@ interface ExpenseData {
   id: string;
   expenseNumber: string;
   categoryId: string;
-  description: string;
+  description?: string | null;
   amount: number;
   notes?: string | null;
   expenseDate: string;
@@ -332,7 +332,7 @@ function ExpensesPageContent() {
             <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
               {item.expenseNumber}
             </span>
-            <span className="font-bold text-slate-900 dark:text-slate-50 text-base">{item.description}</span>
+            <span className="font-bold text-slate-900 dark:text-slate-50 text-base">{item.description || item.category?.name || "Expense"}</span>
           </div>
           <span className="font-extrabold text-red-600 text-base">
             ₹{item.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -676,17 +676,14 @@ function ExpensesPageContent() {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-355">
-                    Description *
+                    Description (optional)
                   </label>
                   <input
                     type="text"
                     placeholder="e.g. Paper Roll purchase / Electricity bill"
-                    {...register("description", { required: "Description is required" })}
-                    className={`flex h-10 w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:bg-slate-955 ${
-                      errors.description ? "border-red-500 focus:border-red-650" : "border-slate-200 focus:border-slate-900 dark:border-slate-808"
-                    }`}
+                    {...register("description")}
+                    className="flex h-10 w-full rounded-xl border border-slate-200 focus:border-slate-900 bg-white px-3 py-2 text-sm outline-none transition-all font-semibold dark:border-slate-808 dark:bg-slate-955"
                   />
-                  {errors.description && <span className="text-xs text-red-505">{String(errors.description.message)}</span>}
                 </div>
 
                 <PriceInput
