@@ -4,6 +4,8 @@ export interface SaleFilters {
   search?: string;
   status?: SaleStatus;
   paymentStatus?: SalePaymentStatus;
+  startDate?: string;
+  endDate?: string;
   page?: number;
   limit?: number;
 }

@@ -34,6 +34,9 @@ import {
 import { getTradingDashboardAction } from "@/features/shared/dashboard/actions";
 import { SaleStatus, SalePaymentStatus } from "@prisma/client";
 
+import { exportSalesToCSV, exportSalesToPDF } from "@/lib/export";
+import { Download } from "lucide-react";
+
 export default function SalesPage() {
   const router = useRouter();
 
@@ -51,6 +54,34 @@ export default function SalesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Date Range Filter State
+  const [datePreset, setDatePreset] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+
+  const handleDatePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    const today = dayjs();
+    if (preset === "all") {
+      setStartDate("");
+      setEndDate("");
+    } else if (preset === "today") {
+      const formatted = today.format("YYYY-MM-DD");
+      setStartDate(formatted);
+      setEndDate(formatted);
+    } else if (preset === "week") {
+      setStartDate(today.startOf("week").format("YYYY-MM-DD"));
+      setEndDate(today.endOf("week").format("YYYY-MM-DD"));
+    } else if (preset === "month") {
+      setStartDate(today.startOf("month").format("YYYY-MM-DD"));
+      setEndDate(today.endOf("month").format("YYYY-MM-DD"));
+    } else if (preset === "year") {
+      setStartDate(today.startOf("year").format("YYYY-MM-DD"));
+      setEndDate(today.endOf("year").format("YYYY-MM-DD"));
+    }
+    setPage(1);
+  };
 
   // Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -74,6 +105,8 @@ export default function SalesPage() {
           search,
           status: statusFilter ? (statusFilter as SaleStatus) : undefined,
           paymentStatus: paymentFilter ? (paymentFilter as SalePaymentStatus) : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
           page,
           limit: pageSize,
         }),
@@ -109,7 +142,7 @@ export default function SalesPage() {
 
   useEffect(() => {
     loadData();
-  }, [search, statusFilter, paymentFilter, page, pageSize]);
+  }, [search, statusFilter, paymentFilter, page, pageSize, startDate, endDate]);
 
   // Handlers
   const handleOpenCreate = () => {
@@ -271,15 +304,43 @@ export default function SalesPage() {
         title="Sales Invoices"
         subtitle="Track customer bills, receipts, outstanding, and dispatch stock level logs"
         action={
-          <Button
-            variant="primary"
-            onPress={handleOpenCreate}
-            className="w-full sm:w-auto font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white border-none"
-            size="md"
-          >
-            <Plus className="w-4.5 h-4.5 mr-1.5" />
-            <span>Create Invoice</span>
-          </Button>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onPress={() => {
+                exportSalesToCSV(sales, datePreset !== "all" ? `${datePreset.toUpperCase()} (${startDate} to ${endDate})` : "All Time");
+                toast.success("Sales invoices exported to CSV!");
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              size="md"
+            >
+              <Download className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Export CSV</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              onPress={() => {
+                exportSalesToPDF(sales, datePreset !== "all" ? `${datePreset.toUpperCase()} (${startDate} to ${endDate})` : "All Time");
+                toast.success("Generating Sales Invoices PDF...");
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              size="md"
+            >
+              <FileText className="w-4 h-4 mr-1.5 text-rose-600 dark:text-rose-400" />
+              <span>Download PDF</span>
+            </Button>
+
+            <Button
+              variant="primary"
+              onPress={handleOpenCreate}
+              className="w-full sm:w-auto font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white border-none"
+              size="md"
+            >
+              <Plus className="w-4.5 h-4.5 mr-1.5" />
+              <span>Create Invoice</span>
+            </Button>
+          </div>
         }
       />
 
@@ -325,9 +386,9 @@ export default function SalesPage() {
       {/* Filters and Table List */}
       <Card>
         <div className="flex flex-col gap-2.5 sm:gap-4">
-          <div className="flex flex-col sm:flex-row justify-between gap-3 items-center">
+          <div className="flex flex-col lg:flex-row justify-between gap-3 items-stretch lg:items-center">
             {/* Search Input */}
-            <div className="relative w-full sm:max-w-md">
+            <div className="relative w-full lg:max-w-md">
               <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
               <input
                 type="text"
@@ -341,15 +402,46 @@ export default function SalesPage() {
               />
             </div>
 
-            {/* Select Dropdowns */}
-            <div className="flex w-full sm:w-auto items-center gap-2.5">
+            {/* Date Preset & Select Dropdowns */}
+            <div className="flex flex-wrap lg:flex-nowrap w-full lg:w-auto items-center gap-2.5">
+              <select
+                value={datePreset}
+                onChange={(e) => handleDatePresetChange(e.target.value)}
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white font-semibold cursor-pointer"
+              >
+                <option value="all">All Dates</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="year">This Year</option>
+                <option value="custom">Custom Range</option>
+              </select>
+
+              {datePreset === "custom" && (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+                    className="h-10 px-2.5 rounded-xl border border-slate-200 bg-white text-xs dark:border-slate-800 dark:bg-slate-950 dark:text-white font-semibold"
+                  />
+                  <span className="text-xs text-slate-400 font-bold">to</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+                    className="h-10 px-2.5 rounded-xl border border-slate-200 bg-white text-xs dark:border-slate-800 dark:bg-slate-950 dark:text-white font-semibold"
+                  />
+                </div>
+              )}
+
               <select
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white font-semibold w-1/2 sm:w-36"
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white font-semibold"
               >
                 <option value="">All Status</option>
                 <option value="DRAFT">DRAFT</option>
@@ -363,7 +455,7 @@ export default function SalesPage() {
                   setPaymentFilter(e.target.value);
                   setPage(1);
                 }}
-                className="h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white font-semibold w-1/2 sm:w-36"
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-slate-900 outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white font-semibold"
               >
                 <option value="">All Payment</option>
                 <option value="UNPAID">UNPAID</option>

@@ -3,15 +3,18 @@
 import { useEffect, useState, useTransition } from "react";
 import Header from "@/components/ui/Header";
 import Card from "@/components/ui/Card";
-import { Tabs, Tab } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { StatsSkeleton } from "@/components/ui/Skeleton";
 import { getProfitLossMetricsAction } from "@/features/shared/dashboard/actions";
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  Package
+  Package,
+  Download as DownloadIcon,
+  FileText
 } from "lucide-react";
+import { downloadCSV, exportReportsToPDF } from "@/lib/export";
 import toast from "react-hot-toast";
 import {
   ResponsiveContainer,
@@ -100,6 +103,61 @@ export default function TradingReportsPageContent() {
       <Header
         title="Profit & Loss reports"
         subtitle="Consolidated financial analytics for single-owner operations"
+        action={
+          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onPress={() => {
+                if (!reportData) return;
+                const rows = [
+                  ["RSK ENTERPRISES ERP - FINANCIAL PROFIT & LOSS REPORT"],
+                  ["Generated On", new Date().toLocaleString("en-IN")],
+                  ["View Mode", activeTab.toUpperCase()],
+                  [],
+                  ["FINANCIAL SUMMARY METRICS"],
+                  ["Sales Revenue (INR)", reportData.summary.totalSales],
+                  ["Purchase Cost (INR)", reportData.summary.totalPurchases],
+                  ["Direct Manufacturing Expenses (INR)", reportData.summary.totalExpenses],
+                  ["Gross Profit (INR)", reportData.summary.grossProfit],
+                  ["Net Profit (INR)", reportData.summary.netProfit],
+                  ["Current Warehouse Stock Value (INR)", reportData.summary.currentInventoryValue],
+                  ["Supplier Outstanding Payable (INR)", reportData.summary.outstandingSupplierAmount],
+                  ["Customer Outstanding Receivable (INR)", reportData.summary.outstandingCustomerAmount],
+                  [],
+                  ["PERIODIC BREAKDOWN"],
+                  ["Period", "Sales Revenue (INR)", "Purchase Cost (INR)", "Net Profit (INR)"],
+                  ...(reportData.chartData || []).map((row: any) => [
+                    row.label,
+                    row.sales || 0,
+                    row.purchases || 0,
+                    row.netProfit || 0,
+                  ]),
+                ];
+                downloadCSV(`Financial_PL_Report_${activeTab}_${new Date().toISOString().split("T")[0]}.csv`, rows);
+                toast.success("P&L Financial report CSV exported!");
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              size="md"
+            >
+              <DownloadIcon className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Export CSV</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              onPress={() => {
+                if (!reportData) return;
+                exportReportsToPDF(reportData, activeTab);
+                toast.success("Generating P&L Financial PDF...");
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              size="md"
+            >
+              <FileText className="w-4 h-4 mr-1.5 text-rose-600 dark:text-rose-400" />
+              <span>Download PDF</span>
+            </Button>
+          </div>
+        }
       />
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

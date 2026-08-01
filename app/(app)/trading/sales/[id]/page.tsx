@@ -14,9 +14,11 @@ import {
   CheckCircle,
   Truck,
   TrendingDown,
-  X,
   Printer,
+  Download,
+  X
 } from "lucide-react";
+import { downloadCSV, exportSaleInvoicePDF } from "@/lib/export";
 import { Button } from "@heroui/react";
 
 import Header from "@/components/ui/Header";
@@ -361,12 +363,62 @@ export default function SaleDetailsPage({ params }: PageProps) {
         {sale.status !== "CANCELLED" && (
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-start sm:justify-end">
             <Button
+              variant="outline"
+              onPress={() => {
+                const rows = [
+                  ["RSK ENTERPRISES ERP - SALE INVOICE DETAIL"],
+                  ["Sale Invoice No", sale.saleNumber],
+                  ["Customer Name", sale.customer?.name || "-"],
+                  ["Reference", sale.reference || "-"],
+                  ["Sale Date", new Date(sale.saleDate).toLocaleDateString("en-IN")],
+                  ["Status", sale.status],
+                  ["Payment Status", sale.paymentStatus],
+                  [],
+                  ["ITEMS DISPATCHED"],
+                  ["Product Name", "Quantity", "Selling Rate (INR)", "Discount (INR)", "Line Total (INR)"],
+                  ...(sale.items || []).map((it: any) => [
+                    it.productName || it.product?.name || "Item",
+                    it.quantity,
+                    it.sellingRate,
+                    it.discount || 0,
+                    it.lineTotal,
+                  ]),
+                  [],
+                  ["Subtotal", sale.subtotal],
+                  ["Discount", sale.discount],
+                  ["Transport Charges", sale.transportCharges],
+                  ["Grand Total (INR)", sale.grandTotal],
+                  ["Amount Paid (INR)", totalPaid],
+                  ["Remaining Balance (INR)", dueAmount],
+                ];
+                downloadCSV(`Sale_Invoice_${sale.saleNumber}.csv`, rows);
+                toast.success("Sale invoice CSV exported!");
+              }}
+              className="rounded-xl text-xs font-bold border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200"
+            >
+              <Download className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Export CSV</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              onPress={() => {
+                exportSaleInvoicePDF(sale);
+                toast.success("Generating Sale Invoice PDF...");
+              }}
+              className="rounded-xl text-xs font-bold border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200"
+            >
+              <FileText className="w-4 h-4 mr-1.5 text-rose-600 dark:text-rose-400" />
+              <span>Download PDF</span>
+            </Button>
+
+            <Button
               variant="ghost"
               onPress={handlePrintReceipt}
               className="rounded-xl text-xs font-bold border-slate-205 text-slate-755 hover:bg-slate-50 dark:border-slate-850 dark:text-slate-300 flex-1 sm:flex-none justify-center text-center py-2"
             >
               <Printer className="w-4 h-4 mr-1.5 shrink-0" />
-              <span>Print Invoice</span>
+              <span>Print</span>
             </Button>
             <Button
               variant="ghost"

@@ -24,9 +24,9 @@ export async function getManufacturingDashboardAction() {
 /**
  * Server action to fetch trading dashboard metrics.
  */
-export async function getTradingDashboardAction() {
+export async function getTradingDashboardAction(startDate?: string, endDate?: string) {
   try {
-    const data = await DashboardService.getTradingMetrics();
+    const data = await DashboardService.getTradingMetrics(startDate, endDate);
     return {
       success: true,
       data,

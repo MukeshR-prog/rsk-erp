@@ -22,8 +22,10 @@ import {
   DollarSign,
   ChevronRight,
   ArrowRight,
-  X
+  X,
+  Download
 } from "lucide-react";
+import { exportPurchasesToCSV, exportPurchasesToPDF } from "@/lib/export";
 import {
   Button,
   Modal,
@@ -442,15 +444,43 @@ export default function PurchasesPage() {
         title="Purchase Invoices"
         subtitle="Manage supplier invoices, purchase orders, and items logs"
         action={
-          <Button
-            variant="primary"
-            onPress={handleOpenCreate}
-            className="w-full sm:w-auto font-bold rounded-xl shadow-md"
-            size="md"
-          >
-            <Plus className="w-4.5 h-4.5 mr-1.5" />
-            <span>Create Purchase</span>
-          </Button>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onPress={() => {
+                exportPurchasesToCSV(purchases, datePreset !== "all" ? `${datePreset.toUpperCase()} (${startDate} to ${endDate})` : "All Time");
+                toast.success("Purchase invoices exported to CSV!");
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              size="md"
+            >
+              <Download className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Export CSV</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              onPress={() => {
+                exportPurchasesToPDF(purchases, datePreset !== "all" ? `${datePreset.toUpperCase()} (${startDate} to ${endDate})` : "All Time");
+                toast.success("Generating Purchase Invoices PDF...");
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              size="md"
+            >
+              <FileText className="w-4 h-4 mr-1.5 text-rose-600 dark:text-rose-400" />
+              <span>Download PDF</span>
+            </Button>
+
+            <Button
+              variant="primary"
+              onPress={handleOpenCreate}
+              className="w-full sm:w-auto font-bold rounded-xl shadow-md"
+              size="md"
+            >
+              <Plus className="w-4.5 h-4.5 mr-1.5" />
+              <span>Create Purchase</span>
+            </Button>
+          </div>
         }
       />
 
