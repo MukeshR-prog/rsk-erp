@@ -57,22 +57,57 @@ type TradingDashboardData = {
   }>;
 };
 
+import { exportTradingDashboardSummary, exportTradingDashboardPDF } from "@/lib/export";
+import { Download, FileText, Calendar } from "lucide-react";
+
 export default function TradingDashboardPage() {
   const { setWorkspace } = useWorkspaceStore();
 
   const [data, setData] = useState<TradingDashboardData | null>(null);
+
+  // Date Range Analysis States
+  const [datePreset, setDatePreset] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const handleDatePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    const today = dayjs();
+    switch (preset) {
+      case "today":
+        setStartDate(today.format("YYYY-MM-DD"));
+        setEndDate(today.format("YYYY-MM-DD"));
+        break;
+      case "week":
+        setStartDate(today.startOf("week").format("YYYY-MM-DD"));
+        setEndDate(today.endOf("week").format("YYYY-MM-DD"));
+        break;
+      case "month":
+        setStartDate(today.startOf("month").format("YYYY-MM-DD"));
+        setEndDate(today.endOf("month").format("YYYY-MM-DD"));
+        break;
+      case "year":
+        setStartDate(today.startOf("year").format("YYYY-MM-DD"));
+        setEndDate(today.endOf("year").format("YYYY-MM-DD"));
+        break;
+      case "all":
+      default:
+        setStartDate("");
+        setEndDate("");
+        break;
+    }
+  };
 
   // Ensure workspace store matches routing context
   useEffect(() => {
     setWorkspace("trading");
   }, [setWorkspace]);
 
-
   useEffect(() => {
     let active = true;
 
     void (async () => {
-      const res = await getTradingDashboardAction();
+      const res = await getTradingDashboardAction(startDate || undefined, endDate || undefined);
 
       if (!active) {
         return;
@@ -88,7 +123,19 @@ export default function TradingDashboardPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [startDate, endDate]);
+
+  const handleExport = () => {
+    if (!data) return;
+    let label = "All Time";
+    if (datePreset !== "all" && datePreset !== "custom") {
+      label = `${datePreset.toUpperCase()} (${startDate} to ${endDate})`;
+    } else if (datePreset === "custom") {
+      label = `CUSTOM RANGE (${startDate || "Beginning"} to ${endDate || "Today"})`;
+    }
+    exportTradingDashboardSummary(data.metrics, data.recentPurchases, data.recentPayments, label);
+    toast.success("Trading dashboard summary exported to CSV!");
+  };
 
   if (!data) {
     return (
@@ -158,18 +205,99 @@ export default function TradingDashboardPage() {
         title="Trading Dashboard"
         subtitle="Distribution, purchases, and sales operations"
         action={
-          <Link href="/trading/purchases?new=true">
+          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
             <Button
-              variant="primary"
-              className="w-full sm:w-auto font-bold rounded-xl bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-950 border-none"
+              variant="outline"
+              onPress={() => {
+                let label = "All Time";
+                if (datePreset !== "all" && datePreset !== "custom") {
+                  label = `${datePreset.toUpperCase()} (${startDate} to ${endDate})`;
+                } else if (datePreset === "custom") {
+                  label = `CUSTOM RANGE (${startDate || "Beginning"} to ${endDate || "Today"})`;
+                }
+                exportTradingDashboardSummary(data.metrics, data.recentPurchases, data.recentPayments, label);
+                toast.success("Dashboard CSV exported!");
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
               size="md"
             >
-              <Plus className="w-4.5 h-4.5 mr-1.5" />
-              <span>New Purchase Invoice</span>
+              <Download className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Export CSV</span>
             </Button>
-          </Link>
+
+            <Button
+              variant="outline"
+              onPress={() => {
+                let label = "All Time";
+                if (datePreset !== "all" && datePreset !== "custom") {
+                  label = `${datePreset.toUpperCase()} (${startDate} to ${endDate})`;
+                } else if (datePreset === "custom") {
+                  label = `CUSTOM RANGE (${startDate || "Beginning"} to ${endDate || "Today"})`;
+                }
+                exportTradingDashboardPDF(data.metrics, data.recentPurchases, data.recentPayments, label);
+                toast.success("Generating Dashboard PDF...");
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              size="md"
+            >
+              <FileText className="w-4 h-4 mr-1.5 text-rose-600 dark:text-rose-400" />
+              <span>Download PDF</span>
+            </Button>
+
+            <Link href="/trading/purchases?new=true" className="w-full sm:w-auto">
+              <Button
+                variant="primary"
+                className="w-full sm:w-auto font-bold rounded-xl bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-950 border-none"
+                size="md"
+              >
+                <Plus className="w-4.5 h-4.5 mr-1.5" />
+                <span>New Purchase Invoice</span>
+              </Button>
+            </Link>
+          </div>
         }
       />
+
+      {/* Date Range Analysis Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 bg-white dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Date Analysis Period</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={datePreset}
+            onChange={(e) => handleDatePresetChange(e.target.value)}
+            className="h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs font-bold outline-none cursor-pointer focus:border-emerald-600"
+          >
+            <option value="all">All Time Registers</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="year">This Year</option>
+            <option value="custom">Custom Date Range</option>
+          </select>
+
+          {datePreset === "custom" && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs font-semibold outline-none"
+              />
+              <span className="text-xs font-bold text-slate-400">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs font-semibold outline-none"
+              />
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

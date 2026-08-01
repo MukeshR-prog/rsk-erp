@@ -442,6 +442,18 @@ export const SaleService = {
       where.paymentStatus = filters.paymentStatus;
     }
 
+    if (filters.startDate || filters.endDate) {
+      where.saleDate = {};
+      if (filters.startDate) {
+        where.saleDate.gte = new Date(filters.startDate);
+      }
+      if (filters.endDate) {
+        const end = new Date(filters.endDate);
+        end.setHours(23, 59, 59, 999);
+        where.saleDate.lte = end;
+      }
+    }
+
     const [items, total] = await Promise.all([
       prisma.sale.findMany({
         where,

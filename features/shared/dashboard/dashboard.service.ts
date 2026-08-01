@@ -6,51 +6,58 @@ export const DashboardService = {
   /**
    * Calculates metrics for the Trading Dashboard.
    */
-  async getTradingMetrics() {
+  async getTradingMetrics(startDate?: string, endDate?: string) {
     const today = new Date();
-    const startOfToday = new Date(
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
+    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+    let rangeStart = new Date(
       today.getFullYear(),
       today.getMonth(),
       today.getDate(),
       0,
       0,
       0,
-      0,
+      0
     );
-    const endOfToday = new Date(
+    let rangeEnd = new Date(
       today.getFullYear(),
       today.getMonth(),
       today.getDate(),
       23,
       59,
       59,
-      999,
-    );
-    const startOfMonth = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      1,
-      0,
-      0,
-      0,
-      0,
+      999
     );
 
-    // 1. Today's Purchases
+    if (startDate) {
+      rangeStart = new Date(startDate);
+    }
+    if (endDate) {
+      rangeEnd = new Date(endDate);
+      rangeEnd.setHours(23, 59, 59, 999);
+    }
+
+    const dateFilter: Prisma.DateTimeFilter = {
+      gte: rangeStart,
+      lte: rangeEnd,
+    };
+
+    // 1. Purchases for period
     const todayPurchasesAgg = await prisma.purchase.aggregate({
       where: {
         status: "COMPLETED",
-        purchaseDate: { gte: startOfToday, lte: endOfToday },
+        purchaseDate: dateFilter,
       },
       _sum: { grandTotal: true },
     });
     const todayPurchases = Number(todayPurchasesAgg._sum.grandTotal || 0);
 
-    // 2. Today's Sales
+    // 2. Sales for period
     const todaySalesAgg = await prisma.sale.aggregate({
       where: {
         status: "COMPLETED",
-        saleDate: { gte: startOfToday, lte: endOfToday },
+        saleDate: dateFilter,
       },
       _sum: { grandTotal: true },
     });
@@ -69,23 +76,23 @@ export const DashboardService = {
     });
     const totalSales = Number(totalSalesAgg._sum.grandTotal || 0);
 
-    // 3. Today's Payments (SUPPLIER_PAYMENT)
+    // 3. Payments for period (SUPPLIER_PAYMENT)
     const todayPaymentsAgg = await prisma.payment.aggregate({
       where: {
         paymentType: "SUPPLIER_PAYMENT",
         status: "COMPLETED",
-        paymentDate: { gte: startOfToday, lte: endOfToday },
+        paymentDate: dateFilter,
       },
       _sum: { amount: true },
     });
     const todayPayments = Number(todayPaymentsAgg._sum.amount || 0);
 
-    // 4. Today's Collections (CUSTOMER_RECEIPT)
+    // 4. Collections for period (CUSTOMER_RECEIPT)
     const todayCollectionsAgg = await prisma.payment.aggregate({
       where: {
         paymentType: "CUSTOMER_RECEIPT",
         status: "COMPLETED",
-        paymentDate: { gte: startOfToday, lte: endOfToday },
+        paymentDate: dateFilter,
       },
       _sum: { amount: true },
     });

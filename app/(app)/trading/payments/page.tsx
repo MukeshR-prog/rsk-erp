@@ -9,7 +9,8 @@ import { TableSkeleton } from "@/components/ui/Skeleton";
 import {
   Button,
 } from "@heroui/react";
-import { Search, Plus, CreditCard, Calendar, RefreshCcw, X } from "lucide-react";
+import { Search, Plus, CreditCard, Calendar, RefreshCcw, X, Download, FileText } from "lucide-react";
+import { exportPaymentsToCSV, exportPaymentsToPDF } from "@/lib/export";
 
 import toast from "react-hot-toast";
 import {
@@ -226,15 +227,43 @@ function PaymentsPageContent() {
         title="Payments & Receipts Ledger"
         subtitle="Log and track customer receipts and supplier disbursements"
         action={
-          <Button
-            variant="primary"
-            onPress={() => setIsNewModalOpen(true)}
-            className="w-full sm:w-auto font-bold rounded-xl"
-            size="md"
-          >
-            <Plus className="w-4.5 h-4.5 mr-1.5" />
-            <span>{mode === "SUPPLIER" ? "Record Supplier Payment" : "Record Customer Receipt"}</span>
-          </Button>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onPress={() => {
+                exportPaymentsToCSV(payments, `${mode} (${datePreset !== "all" ? `${datePreset.toUpperCase()} ${startDate} to ${endDate}` : "All Time"})`);
+                toast.success(`${mode === "SUPPLIER" ? "Supplier Payments" : "Customer Receipts"} exported to CSV!`);
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              size="md"
+            >
+              <Download className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Export CSV</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              onPress={() => {
+                exportPaymentsToPDF(payments, `${mode} (${datePreset !== "all" ? `${datePreset.toUpperCase()} ${startDate} to ${endDate}` : "All Time"})`);
+                toast.success(`Generating ${mode === "SUPPLIER" ? "Supplier Payments" : "Customer Receipts"} PDF...`);
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              size="md"
+            >
+              <FileText className="w-4 h-4 mr-1.5 text-rose-600 dark:text-rose-400" />
+              <span>Download PDF</span>
+            </Button>
+
+            <Button
+              variant="primary"
+              onPress={() => setIsNewModalOpen(true)}
+              className="w-full sm:w-auto font-bold rounded-xl"
+              size="md"
+            >
+              <Plus className="w-4.5 h-4.5 mr-1.5" />
+              <span>{mode === "SUPPLIER" ? "Record Supplier Payment" : "Record Customer Receipt"}</span>
+            </Button>
+          </div>
         }
       />
 

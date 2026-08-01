@@ -17,8 +17,11 @@ import {
   ArrowRight,
   TrendingDown,
   DollarSign,
-  X
+  X,
+  Printer,
+  Download
 } from "lucide-react";
+import { downloadCSV, exportPurchaseInvoicePDF } from "@/lib/export";
 import { Button } from "@heroui/react";
 
 import Header from "@/components/ui/Header";
@@ -154,17 +157,71 @@ export default function PurchaseDetailsPage({ params }: PageProps) {
           year: "numeric",
         })}`}
         action={
-          isCompleted ? (
+          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
             <Button
-              variant="danger"
-              onPress={() => setCancelOpen(true)}
-              className="w-full sm:w-auto font-bold rounded-xl"
+              variant="outline"
+              onPress={() => {
+                const invoiceRows = [
+                  ["RSK ENTERPRISES ERP - PURCHASE INVOICE DETAIL"],
+                  ["Purchase No", purchase.purchaseNumber],
+                  ["Supplier Invoice No", purchase.supplierInvoiceNumber || "-"],
+                  ["Supplier Name", purchase.supplier?.name || "-"],
+                  ["Purchase Date", new Date(purchase.purchaseDate).toLocaleDateString("en-IN")],
+                  ["Status", purchase.status],
+                  ["Payment Status", purchase.paymentStatus],
+                  [],
+                  ["ITEMS PURCHASED"],
+                  ["Product Name", "Quantity", "Purchase Rate (INR)", "Discount (INR)", "Line Total (INR)"],
+                  ...(purchase.items || []).map((it: any) => [
+                    it.product?.name || "Item",
+                    it.quantity,
+                    it.purchaseRate,
+                    it.discount || 0,
+                    it.lineTotal,
+                  ]),
+                  [],
+                  ["Subtotal", purchase.subtotal],
+                  ["Discount", purchase.discount],
+                  ["Transport Charges", purchase.transportCharges],
+                  ["Grand Total (INR)", purchase.grandTotal],
+                  ["Amount Paid (INR)", purchase.totalPaid],
+                  ["Remaining Balance (INR)", purchase.remainingBalance],
+                ];
+                downloadCSV(`Purchase_Invoice_${purchase.purchaseNumber}.csv`, invoiceRows);
+                toast.success("Purchase invoice downloaded!");
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
               size="md"
             >
-              <AlertTriangle className="w-4 h-4 mr-1.5" />
-              <span>Cancel Invoice</span>
+              <Download className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Export CSV</span>
             </Button>
-          ) : undefined
+
+            <Button
+              variant="outline"
+              onPress={() => {
+                exportPurchaseInvoicePDF(purchase);
+                toast.success("Generating Purchase Invoice PDF...");
+              }}
+              className="w-full sm:w-auto font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              size="md"
+            >
+              <Printer className="w-4 h-4 mr-1.5 text-rose-600 dark:text-rose-400" />
+              <span>Download PDF</span>
+            </Button>
+
+            {isCompleted && (
+              <Button
+                variant="danger"
+                onPress={() => setCancelOpen(true)}
+                className="w-full sm:w-auto font-bold rounded-xl"
+                size="md"
+              >
+                <AlertTriangle className="w-4 h-4 mr-1.5" />
+                <span>Cancel Invoice</span>
+              </Button>
+            )}
+          </div>
         }
       />
 
