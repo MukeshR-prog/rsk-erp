@@ -4,7 +4,7 @@ import { NumberGeneratorService } from "@/features/shared/services/numberGenerat
 
 export interface CreateExpenseInput {
   categoryId: string;
-  description: string;
+  description?: string | null;
   amount: number;
   notes?: string | null;
   expenseDate: Date;
@@ -13,7 +13,7 @@ export interface CreateExpenseInput {
 export interface UpdateExpenseInput {
   id: string;
   categoryId: string;
-  description: string;
+  description?: string | null;
   amount: number;
   notes?: string | null;
   expenseDate: Date;
@@ -45,7 +45,7 @@ export const ManufacturingService = {
         data: {
           expenseNumber,
           categoryId: data.categoryId,
-          description: data.description,
+          description: data.description || null,
           amount: new Prisma.Decimal(data.amount),
           notes: data.notes || null,
           expenseDate: data.expenseDate,
@@ -73,7 +73,7 @@ export const ManufacturingService = {
         where: { id: data.id },
         data: {
           categoryId: data.categoryId,
-          description: data.description,
+          description: data.description || null,
           amount: new Prisma.Decimal(data.amount),
           notes: data.notes || null,
           expenseDate: data.expenseDate,
@@ -119,10 +119,11 @@ export const ManufacturingService = {
     const where: Prisma.ManufacturingExpenseWhereInput = {};
 
     if (search) {
-      where.description = {
-        contains: search,
-        mode: "insensitive",
-      };
+      where.OR = [
+        { description: { contains: search, mode: "insensitive" } },
+        { notes: { contains: search, mode: "insensitive" } },
+        { category: { name: { contains: search, mode: "insensitive" } } },
+      ];
     }
 
     if (categoryId && categoryId !== "ALL") {
@@ -255,7 +256,7 @@ export const ManufacturingService = {
     ]);
 
     return {
-      items: items.map((x: any) => ({
+      items: items.map((x) => ({
         ...x,
         amount: Number(x.amount),
       })),

@@ -10,6 +10,7 @@ datasource db {
 model Profile {
   id        String   @id @default(uuid())
   email     String   @unique
+  phone     String?  @unique
   fullName  String?
   role      String   @default("OWNER")
   createdAt DateTime @default(now())
@@ -107,7 +108,7 @@ model ManufacturingExpense {
   id            String          @id @default(uuid())
   expenseNumber String          @unique
   categoryId    String
-  description   String
+  description   String?
   amount        Decimal         @db.Decimal(12, 2)
   notes         String?
   expenseDate   DateTime        @default(now())
